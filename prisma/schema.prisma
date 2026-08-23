@@ -1,0 +1,109 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Salon {
+  id                 String   @id @default(uuid())
+  name               String
+  slug               String   @unique
+  logoUrl            String?
+  brandColor         String   @default("#111111")
+  stampsRequired     Int      @default(10)
+  rewardDescription  String   @default("10 EUR Rabatt")
+  createdAt          DateTime @default(now())
+
+  staffUsers   StaffUser[]
+  customers    Customer[]
+  loyaltyCards LoyaltyCard[]
+
+  @@map("salons")
+}
+
+model StaffUser {
+  id           String   @id @default(uuid())
+  salonId      String
+  email        String
+  passwordHash String
+  role         String   @default("staff") // "owner" | "staff"
+  createdAt    DateTime @default(now())
+
+  salon        Salon         @relation(fields: [salonId], references: [id])
+  stampEvents  StampEvent[]
+  redemptions  Redemption[]
+
+  @@unique([salonId, email])
+  @@map("staff_users")
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  salonId   String
+  name      String
+  email     String?
+  phone     String?
+  createdAt DateTime @default(now())
+
+  salon        Salon         @relation(fields: [salonId], references: [id])
+  loyaltyCards LoyaltyCard[]
+
+  @@map("customers")
+}
+
+model LoyaltyCard {
+  id              String   @id @default(uuid())
+  customerId      String
+  salonId         String
+  serialNumber    String   @unique
+  stampCount      Int      @default(0)
+  appleAuthToken  String?
+  googleObjectId  String?
+  createdAt       DateTime @default(now())
+
+  customer    Customer     @relation(fields: [customerId], references: [id])
+  salon       Salon        @relation(fields: [salonId], references: [id])
+  stampEvents StampEvent[]
+  redemptions Redemption[]
+
+  @@index([salonId])
+  @@map("loyalty_cards")
+}
+
+model StampEvent {
+  id            String   @id @default(uuid())
+  loyaltyCardId String
+  staffUserId   String
+  createdAt     DateTime @default(now())
+
+  loyaltyCard LoyaltyCard @relation(fields: [loyaltyCardId], references: [id])
+  staffUser   StaffUser   @relation(fields: [staffUserId], references: [id])
+
+  @@map("stamp_events")
+}
+
+model Redemption {
+  id            String   @id @default(uuid())
+  loyaltyCardId String
+  staffUserId   String
+  redeemedAt    DateTime @default(now())
+
+  loyaltyCard LoyaltyCard @relation(fields: [loyaltyCardId], references: [id])
+  staffUser   StaffUser   @relation(fields: [staffUserId], references: [id])
+
+  @@map("redemptions")
+}
+
+model RegisteredDevice {
+  id                     String @id @default(uuid())
+  deviceLibraryIdentifier String
+  passTypeId             String
+  serialNumber           String
+  pushToken              String
+
+  @@unique([deviceLibraryIdentifier, serialNumber])
+  @@map("registered_devices")
+}
