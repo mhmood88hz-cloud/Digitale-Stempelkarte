@@ -20,6 +20,19 @@ function parseCookie(header: string | undefined, name: string): string | null {
   return null;
 }
 
+export function buildSetCookieHeader(token: string, options: { secure?: boolean; maxAgeSeconds?: number } = {}): string {
+  const { secure = false, maxAgeSeconds = 12 * 60 * 60 } = options;
+  const parts = [`${SESSION_COOKIE_NAME}=${token}`, 'HttpOnly', 'Path=/', 'SameSite=Lax', `Max-Age=${maxAgeSeconds}`];
+  if (secure) parts.push('Secure');
+  return parts.join('; ');
+}
+
+export function buildClearCookieHeader(secure = false): string {
+  const parts = [`${SESSION_COOKIE_NAME}=`, 'HttpOnly', 'Path=/', 'SameSite=Lax', 'Max-Age=0'];
+  if (secure) parts.push('Secure');
+  return parts.join('; ');
+}
+
 /**
  * preHandler that reads the session cookie (if present) and, when it verifies, attaches
  * `request.session`. Does NOT reject requests without a session -- use `requireAuth` for that.
