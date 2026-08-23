@@ -6,7 +6,10 @@ services:
       POSTGRES_PASSWORD: stampcard
       POSTGRES_DB: stampcard
     ports:
-      - "5432:5432"
+      # Host port 55432 (not 5432): this machine already runs an unrelated,
+      # non-Docker Postgres bound to 127.0.0.1:5432 -- reusing 5432 here would
+      # silently connect clients to that other instance instead of this one.
+      - "55432:5432"
     volumes:
       - stampcard_pgdata:/var/lib/postgresql/data
 
