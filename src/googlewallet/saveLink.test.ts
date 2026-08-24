@@ -18,6 +18,7 @@ const INPUT = {
   stampCount: 4,
   stampsRequired: 10,
   hexBackgroundColor: '#ff0000',
+  programLogoUrl: 'https://example.com/logo.png',
   serviceAccountEmail: 'wallet@example-project.iam.gserviceaccount.com',
   privateKeyPem: privateKey,
 };

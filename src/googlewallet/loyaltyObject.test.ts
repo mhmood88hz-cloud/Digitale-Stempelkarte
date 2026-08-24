@@ -7,16 +7,21 @@ test('class and object ids are namespaced under the issuer id', () => {
   assert.equal(buildLoyaltyObjectId('3388000000012345', 'LC-abc123'), '3388000000012345.LC-abc123');
 });
 
-test('loyalty class payload carries the salon branding', () => {
+test('loyalty class payload carries the salon branding and a program logo (required by Google)', () => {
   const payload = buildLoyaltyClassPayload({
     issuerId: '3388000000012345',
     classSuffix: 'salon-beispiel',
     salonName: 'Salon Beispiel',
     hexBackgroundColor: '#ff0000',
+    programLogoUrl: 'https://example.com/logo.png',
   });
   assert.equal(payload.id, '3388000000012345.salon-beispiel');
   assert.equal(payload.issuerName, 'Salon Beispiel');
   assert.equal(payload.hexBackgroundColor, '#ff0000');
+  assert.deepEqual(payload.programLogo, {
+    sourceUri: { uri: 'https://example.com/logo.png' },
+    contentDescription: { defaultValue: { language: 'de', value: 'Salon Beispiel Logo' } },
+  });
 });
 
 test('loyalty object payload carries the stamp progress and a QR barcode of the serial number', () => {
@@ -28,6 +33,7 @@ test('loyalty object payload carries the stamp progress and a QR barcode of the 
     stampCount: 4,
     stampsRequired: 10,
     hexBackgroundColor: '#ff0000',
+    programLogoUrl: 'https://example.com/logo.png',
   });
   assert.equal(payload.id, '3388000000012345.LC-abc123');
   assert.equal(payload.classId, '3388000000012345.salon-beispiel');

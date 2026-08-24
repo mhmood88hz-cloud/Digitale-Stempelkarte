@@ -5,6 +5,7 @@ import { renderWalletPage } from './page';
 import { buildManifest } from './manifest';
 import { loadGoogleWalletCredentials } from '../googlewallet/credentials';
 import { buildSaveLink } from '../googlewallet/saveLink';
+import { DEFAULT_PROGRAM_LOGO_URL } from '../googlewallet/loyaltyObject';
 
 export interface CustomerPwaRoutesOptions {
   prisma: PrismaClient;
@@ -80,6 +81,7 @@ export function registerCustomerPwaRoutes(app: FastifyInstance, options: Custome
       stampCount: card.stampCount,
       stampsRequired: salon.stampsRequired,
       hexBackgroundColor: salon.brandColor,
+      programLogoUrl: salon.logoUrl ?? DEFAULT_PROGRAM_LOGO_URL,
     });
     return reply.redirect(link, 302);
   });
