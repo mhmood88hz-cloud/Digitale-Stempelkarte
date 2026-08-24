@@ -5,7 +5,7 @@ import { renderWalletPage } from './page';
 import { buildManifest } from './manifest';
 import { loadGoogleWalletCredentials } from '../googlewallet/credentials';
 import { buildSaveLink } from '../googlewallet/saveLink';
-import { DEFAULT_PROGRAM_LOGO_URL } from '../googlewallet/loyaltyObject';
+import { DEFAULT_PROGRAM_LOGO_URL, buildLoyaltyObjectId } from '../googlewallet/loyaltyObject';
 
 export interface CustomerPwaRoutesOptions {
   prisma: PrismaClient;
@@ -83,6 +83,19 @@ export function registerCustomerPwaRoutes(app: FastifyInstance, options: Custome
       hexBackgroundColor: salon.brandColor,
       programLogoUrl: salon.logoUrl ?? DEFAULT_PROGRAM_LOGO_URL,
     });
+
+    // Optimistic: we have no server-to-server callback from Google when the customer actually
+    // taps "Add" in their browser, so we record intent to use Google Wallet at redirect time.
+    // A later stamp push (see loyalty/routes.ts) against an object that was never actually
+    // saved just fails harmlessly and is caught/logged there, not treated as a hard error.
+    await prisma.loyaltyCard.update({
+      where: { id: card.id },
+      data: {
+        walletMode: 'google',
+        googleObjectId: buildLoyaltyObjectId(credentials.issuerId, card.serialNumber),
+      },
+    });
+
     return reply.redirect(link, 302);
   });
 }

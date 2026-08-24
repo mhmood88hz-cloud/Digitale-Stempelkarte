@@ -1,8 +1,34 @@
-import type { FastifyInstance } from 'fastify';
-import type { PrismaClient } from '@prisma/client';
+import type { FastifyBaseLogger, FastifyInstance } from 'fastify';
+import type { LoyaltyCard, PrismaClient } from '@prisma/client';
 import { requireAuth } from '../auth/tenantGuard';
 import { createCustomerWithCard } from './customerRepository';
 import { addStamp, findCardBySerialInSalon, redeemReward, RewardNotReadyError } from './stampRepository';
+import { loadGoogleWalletCredentials } from '../googlewallet/credentials';
+import { pushLoyaltyObjectUpdate } from '../googlewallet/updateObject';
+
+/**
+ * Pushes the new stamp count to Google Wallet if this card has one (walletMode: 'google').
+ * Deliberately non-fatal: a saved Google Wallet card not refreshing immediately is worse UX
+ * than ideal, but failing the whole stamp/redemption request over a third-party API hiccup
+ * would be worse -- the database stamp count (checked by staff via /staff/scan) is the source
+ * of truth regardless.
+ */
+async function pushGoogleWalletUpdateIfNeeded(
+  card: LoyaltyCard,
+  stampsRequired: number,
+  log: FastifyBaseLogger,
+): Promise<void> {
+  if (card.walletMode !== 'google' || !card.googleObjectId) return;
+  try {
+    const credentials = loadGoogleWalletCredentials();
+    await pushLoyaltyObjectUpdate(credentials, card.googleObjectId, {
+      stampCount: card.stampCount,
+      stampsRequired,
+    });
+  } catch (err) {
+    log.warn({ err, loyaltyCardId: card.id }, 'Google Wallet object update failed');
+  }
+}
 
 export interface LoyaltyRoutesOptions {
   prisma: PrismaClient;
@@ -70,6 +96,7 @@ export function registerLoyaltyRoutes(app: FastifyInstance, options: LoyaltyRout
       if (!found) return reply.code(404).send({ error: 'card_not_found' });
 
       const updated = await addStamp(prisma, { loyaltyCardId: found.card.id, staffUserId: session.staffUserId });
+      await pushGoogleWalletUpdateIfNeeded(updated, found.salon.stampsRequired, request.log);
       return reply.send({
         stampCount: updated.stampCount,
         stampsRequired: found.salon.stampsRequired,
@@ -101,6 +128,7 @@ export function registerLoyaltyRoutes(app: FastifyInstance, options: LoyaltyRout
           staffUserId: session.staffUserId,
           stampsRequired: found.salon.stampsRequired,
         });
+        await pushGoogleWalletUpdateIfNeeded(updated, found.salon.stampsRequired, request.log);
         return reply.send({ stampCount: updated.stampCount });
       } catch (err) {
         if (err instanceof RewardNotReadyError) {
