@@ -8,6 +8,7 @@ import { registerCustomerPwaRoutes } from './customer-pwa/routes';
 import { registerReportRoutes } from './reports/routes';
 import { registerAdminRoutes } from './admin/routes';
 import { registerWebAdminRoutes } from './web-admin/routes';
+import { registerBillingRoutes } from './billing/routes';
 
 export interface BuildAppOptions {
   prisma: PrismaClient;
@@ -29,6 +30,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   registerReportRoutes(app, options);
   registerAdminRoutes(app, options);
   registerWebAdminRoutes(app);
+  registerBillingRoutes(app, options);
 
   return app;
 }

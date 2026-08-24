@@ -8,16 +8,18 @@ datasource db {
 }
 
 model Salon {
-  id                 String   @id @default(uuid())
-  name               String
-  slug               String   @unique
-  logoUrl            String?
-  brandColor         String   @default("#111111")
-  stampsRequired     Int      @default(10)
-  rewardDescription  String   @default("10 EUR Rabatt")
-  trialEndsAt        DateTime
-  subscriptionStatus String   @default("trial") // "trial" | "active" | "canceled"
-  createdAt          DateTime @default(now())
+  id                   String   @id @default(uuid())
+  name                 String
+  slug                 String   @unique
+  logoUrl              String?
+  brandColor           String   @default("#111111")
+  stampsRequired       Int      @default(10)
+  rewardDescription    String   @default("10 EUR Rabatt")
+  trialEndsAt          DateTime
+  subscriptionStatus   String   @default("trial") // "trial" | "active" | "canceled"
+  stripeCustomerId     String?  @unique
+  stripeSubscriptionId String?  @unique
+  createdAt            DateTime @default(now())
 
   staffUsers   StaffUser[]
   customers    Customer[]
@@ -34,9 +36,9 @@ model StaffUser {
   role         String   @default("staff") // "owner" | "staff"
   createdAt    DateTime @default(now())
 
-  salon        Salon         @relation(fields: [salonId], references: [id])
-  stampEvents  StampEvent[]
-  redemptions  Redemption[]
+  salon       Salon        @relation(fields: [salonId], references: [id])
+  stampEvents StampEvent[]
+  redemptions Redemption[]
 
   @@unique([salonId, email])
   @@map("staff_users")
@@ -63,15 +65,15 @@ enum WalletMode {
 }
 
 model LoyaltyCard {
-  id              String     @id @default(uuid())
-  customerId      String
-  salonId         String
-  serialNumber    String     @unique
-  stampCount      Int        @default(0)
-  walletMode      WalletMode @default(pwa)
-  appleAuthToken  String?
-  googleObjectId  String?
-  createdAt       DateTime   @default(now())
+  id             String     @id @default(uuid())
+  customerId     String
+  salonId        String
+  serialNumber   String     @unique
+  stampCount     Int        @default(0)
+  walletMode     WalletMode @default(pwa)
+  appleAuthToken String?
+  googleObjectId String?
+  createdAt      DateTime   @default(now())
 
   customer    Customer     @relation(fields: [customerId], references: [id])
   salon       Salon        @relation(fields: [salonId], references: [id])
@@ -107,11 +109,11 @@ model Redemption {
 }
 
 model RegisteredDevice {
-  id                     String @id @default(uuid())
+  id                      String @id @default(uuid())
   deviceLibraryIdentifier String
-  passTypeId             String
-  serialNumber           String
-  pushToken              String
+  passTypeId              String
+  serialNumber            String
+  pushToken               String
 
   @@unique([deviceLibraryIdentifier, serialNumber])
   @@map("registered_devices")
