@@ -55,6 +55,17 @@ export async function requireAuth(request: FastifyRequest, reply: FastifyReply):
   }
 }
 
+/** preHandler that rejects with 401 (no session) or 403 (session present, but role != 'owner'). */
+export async function requireOwner(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  if (!request.session) {
+    await reply.code(401).send({ error: 'unauthenticated' });
+    return;
+  }
+  if (request.session.role !== 'owner') {
+    await reply.code(403).send({ error: 'forbidden' });
+  }
+}
+
 /**
  * preHandler factory enforcing the core multi-tenant boundary: the authenticated staff user's
  * salon must match the salon the request is targeting (e.g. from a route param or a loaded

@@ -2,10 +2,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import Fastify from 'fastify';
 import { createSessionToken } from './session';
-import { attachSession, requireAuth, requireSameSalon, SESSION_COOKIE_NAME } from './tenantGuard';
+import { attachSession, requireAuth, requireOwner, requireSameSalon, SESSION_COOKIE_NAME } from './tenantGuard';
 
 const SECRET = 'test-secret';
 const SESSION = { staffUserId: 'staff-1', salonId: 'salon-1', role: 'owner' };
+const STAFF_SESSION = { staffUserId: 'staff-2', salonId: 'salon-1', role: 'staff' };
 
 function buildTestApp() {
   const app = Fastify();
@@ -18,6 +19,8 @@ function buildTestApp() {
     { preHandler: [requireAuth, requireSameSalon((request) => (request.params as { salonId: string }).salonId)] },
     async () => ({ ok: true }),
   );
+
+  app.get('/owner-only', { preHandler: requireOwner }, async () => ({ ok: true }));
 
   return app;
 }
@@ -69,6 +72,29 @@ test('requireSameSalon blocks access to a different salon (cross-tenant boundary
 test('requireSameSalon rejects unauthenticated requests before checking the salon', async () => {
   const app = buildTestApp();
   const response = await app.inject({ method: 'GET', url: '/salons/salon-1/secret' });
+  assert.equal(response.statusCode, 401);
+  await app.close();
+});
+
+test('requireOwner allows an owner-role session', async () => {
+  const app = buildTestApp();
+  const token = createSessionToken(SESSION, SECRET);
+  const response = await app.inject({ method: 'GET', url: '/owner-only', headers: { cookie: cookieHeader(token) } });
+  assert.equal(response.statusCode, 200);
+  await app.close();
+});
+
+test('requireOwner blocks a staff-role session with 403', async () => {
+  const app = buildTestApp();
+  const token = createSessionToken(STAFF_SESSION, SECRET);
+  const response = await app.inject({ method: 'GET', url: '/owner-only', headers: { cookie: cookieHeader(token) } });
+  assert.equal(response.statusCode, 403);
+  await app.close();
+});
+
+test('requireOwner rejects unauthenticated requests with 401', async () => {
+  const app = buildTestApp();
+  const response = await app.inject({ method: 'GET', url: '/owner-only' });
   assert.equal(response.statusCode, 401);
   await app.close();
 });
