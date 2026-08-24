@@ -1,12 +1,13 @@
 /**
- * Staff scan dashboard: plain HTML/CSS/JS, no build step, no external dependencies. Manual
- * serial-number entry always works; camera scanning is progressive enhancement via the
- * browser-native BarcodeDetector API (no bundled scanning library), started explicitly via a
- * button rather than automatically -- BarcodeDetector isn't supported everywhere (notably: no
- * Safari/iOS support as of writing) and getUserMedia needs a secure context (HTTPS or
- * localhost), so a silent auto-attempt left staff with no visible camera and no explanation why.
- * The button now always shows a concrete reason when it can't start (unsupported browser, no
- * secure context, permission denied) instead of just doing nothing.
+ * Staff scan dashboard: plain HTML/CSS/JS, no build step. Manual serial-number entry always
+ * works; camera scanning uses jsQR (served locally, see routes.ts) to decode QR codes from raw
+ * video frames in plain JS, rather than the browser-native BarcodeDetector API -- BarcodeDetector
+ * isn't implemented in WebKit, and every iOS browser (Safari, Chrome, Firefox alike) is forced
+ * by Apple to use WebKit under the hood, so relying on it would leave every iPhone unable to
+ * scan at all. jsQR only needs getUserMedia + canvas, both of which iOS does support, once served
+ * over a secure context (HTTPS or localhost). Camera starts explicitly via a button, not
+ * automatically, and always shows a concrete reason when it can't start (no secure context,
+ * permission denied) instead of just doing nothing.
  */
 export function renderScanPage(): string {
   return `<!doctype html>
@@ -35,6 +36,7 @@ export function renderScanPage(): string {
   <video id="video" autoplay muted playsinline></video>
   <div id="result"></div>
 
+<script src="/staff/jsqr.js"></script>
 <script>
 (function () {
   var serialInput = document.getElementById('serial-input');
@@ -106,9 +108,12 @@ export function renderScanPage(): string {
   });
 
   var cameraButton = document.getElementById('camera-button');
+  var scanCanvas = document.createElement('canvas');
+  var scanCtx = scanCanvas.getContext('2d');
+
   cameraButton.addEventListener('click', function () {
-    if (!('BarcodeDetector' in window)) {
-      showResult('Kamera-Scan wird von diesem Browser nicht unterstuetzt (z.B. Safari/iPhone). Bitte Seriennummer manuell eingeben.', false);
+    if (typeof jsQR !== 'function') {
+      showResult('QR-Scan-Bibliothek konnte nicht geladen werden. Bitte Seriennummer manuell eingeben.', false);
       return;
     }
     if (!('mediaDevices' in navigator) || !navigator.mediaDevices.getUserMedia) {
@@ -116,16 +121,20 @@ export function renderScanPage(): string {
       return;
     }
 
-    var detector = new window.BarcodeDetector();
     navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }).then(function (stream) {
       video.style.display = 'block';
       video.srcObject = stream;
       var scanLoop = function () {
-        detector.detect(video).then(function (codes) {
-          if (codes.length > 0) {
-            serialInput.value = codes[0].rawValue;
+        if (video.readyState === video.HAVE_ENOUGH_DATA && video.videoWidth > 0) {
+          scanCanvas.width = video.videoWidth;
+          scanCanvas.height = video.videoHeight;
+          scanCtx.drawImage(video, 0, 0, scanCanvas.width, scanCanvas.height);
+          var imageData = scanCtx.getImageData(0, 0, scanCanvas.width, scanCanvas.height);
+          var code = jsQR(imageData.data, imageData.width, imageData.height);
+          if (code) {
+            serialInput.value = code.data;
           }
-        }).catch(function () {});
+        }
         requestAnimationFrame(scanLoop);
       };
       requestAnimationFrame(scanLoop);

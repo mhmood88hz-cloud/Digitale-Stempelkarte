@@ -28,6 +28,7 @@ test('GET /staff/scan serves the scan dashboard HTML once authenticated', async 
     assert.match(response.headers['content-type'] as string, /text\/html/);
     assert.match(response.body, /serial-input/);
     assert.match(response.body, /stamp-button/);
+    assert.match(response.body, /\/staff\/jsqr\.js/);
   } finally {
     const salon = await prisma.salon.findUnique({ where: { slug } });
     if (salon) {
@@ -36,4 +37,13 @@ test('GET /staff/scan serves the scan dashboard HTML once authenticated', async 
     }
     await app.close();
   }
+});
+
+test('GET /staff/jsqr.js serves the QR-decoding library (no auth needed)', async () => {
+  const app = buildApp({ prisma, sessionSecret: 'test-secret' });
+  const response = await app.inject({ method: 'GET', url: '/staff/jsqr.js' });
+  assert.equal(response.statusCode, 200);
+  assert.match(response.headers['content-type'] as string, /javascript/);
+  assert.match(response.body, /jsQR/);
+  await app.close();
 });
