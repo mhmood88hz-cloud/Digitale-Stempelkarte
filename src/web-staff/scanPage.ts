@@ -1,8 +1,12 @@
 /**
  * Staff scan dashboard: plain HTML/CSS/JS, no build step, no external dependencies. Manual
  * serial-number entry always works; camera scanning is progressive enhancement via the
- * browser-native BarcodeDetector API (no bundled scanning library) and is simply hidden on
- * browsers that don't support it (notably: no Safari/iOS support as of writing).
+ * browser-native BarcodeDetector API (no bundled scanning library), started explicitly via a
+ * button rather than automatically -- BarcodeDetector isn't supported everywhere (notably: no
+ * Safari/iOS support as of writing) and getUserMedia needs a secure context (HTTPS or
+ * localhost), so a silent auto-attempt left staff with no visible camera and no explanation why.
+ * The button now always shows a concrete reason when it can't start (unsupported browser, no
+ * secure context, permission denied) instead of just doing nothing.
  */
 export function renderScanPage(): string {
   return `<!doctype html>
@@ -27,6 +31,7 @@ export function renderScanPage(): string {
   <input id="serial-input" type="text" placeholder="Seriennummer (z.B. LC-...)" autocomplete="off">
   <button id="stamp-button" type="button">Stempel geben</button>
   <button id="redeem-button" type="button">Rabatt einlösen</button>
+  <button id="camera-button" type="button">Kamera starten</button>
   <video id="video" autoplay muted playsinline></video>
   <div id="result"></div>
 
@@ -100,10 +105,20 @@ export function renderScanPage(): string {
     });
   });
 
-  if ('BarcodeDetector' in window) {
-    video.style.display = 'block';
+  var cameraButton = document.getElementById('camera-button');
+  cameraButton.addEventListener('click', function () {
+    if (!('BarcodeDetector' in window)) {
+      showResult('Kamera-Scan wird von diesem Browser nicht unterstuetzt (z.B. Safari/iPhone). Bitte Seriennummer manuell eingeben.', false);
+      return;
+    }
+    if (!('mediaDevices' in navigator) || !navigator.mediaDevices.getUserMedia) {
+      showResult('Kamera-Zugriff ist hier nicht verfuegbar (evtl. kein HTTPS). Bitte Seriennummer manuell eingeben.', false);
+      return;
+    }
+
     var detector = new window.BarcodeDetector();
     navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }).then(function (stream) {
+      video.style.display = 'block';
       video.srcObject = stream;
       var scanLoop = function () {
         detector.detect(video).then(function (codes) {
@@ -114,10 +129,10 @@ export function renderScanPage(): string {
         requestAnimationFrame(scanLoop);
       };
       requestAnimationFrame(scanLoop);
-    }).catch(function () {
-      video.style.display = 'none';
+    }).catch(function (err) {
+      showResult('Kamera-Zugriff verweigert oder fehlgeschlagen: ' + err.message, false);
     });
-  }
+  });
 })();
 </script>
 </body>
