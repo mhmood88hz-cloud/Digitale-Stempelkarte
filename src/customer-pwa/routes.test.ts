@@ -69,6 +69,43 @@ test('GET /wallet/:serialNumber/manifest.webmanifest returns a valid manifest', 
   }
 });
 
+const googleWalletConfigured = Boolean(
+  process.env.GOOGLE_WALLET_ISSUER_ID && process.env.GOOGLE_WALLET_SERVICE_ACCOUNT_JSON,
+);
+
+test(
+  'GET /wallet/:serialNumber/google-save-link redirects to a validly signed pay.google.com URL',
+  { skip: !googleWalletConfigured && 'GOOGLE_WALLET_ISSUER_ID/GOOGLE_WALLET_SERVICE_ACCOUNT_JSON not configured' },
+  async () => {
+    const app = buildApp({ prisma, sessionSecret: 'test-secret' });
+    const slug = `test-pwa-${Date.now()}`;
+    try {
+      const { serialNumber } = await setupSalonWithCard(app, slug);
+      const response = await app.inject({ method: 'GET', url: `/wallet/${serialNumber}/google-save-link` });
+      assert.equal(response.statusCode, 302);
+
+      const location = response.headers.location as string;
+      assert.match(location, /^https:\/\/pay\.google\.com\/gp\/v\/save\//);
+
+      const jwt = location.replace('https://pay.google.com/gp/v/save/', '');
+      const payload = JSON.parse(Buffer.from(jwt.split('.')[1], 'base64url').toString('utf8'));
+      assert.match(payload.iss, /\.iam\.gserviceaccount\.com$/);
+      assert.equal(payload.payload.loyaltyObjects.length, 1);
+      assert.equal(payload.payload.loyaltyObjects[0].barcode.value, serialNumber);
+    } finally {
+      await cleanupSalon(slug);
+      await app.close();
+    }
+  },
+);
+
+test('GET /wallet/:serialNumber/google-save-link returns 404 for an unknown serial', async () => {
+  const app = buildApp({ prisma, sessionSecret: 'test-secret' });
+  const response = await app.inject({ method: 'GET', url: '/wallet/LC-does-not-exist/google-save-link' });
+  assert.equal(response.statusCode, 404);
+  await app.close();
+});
+
 test('GET /wallet/sw.js serves the service worker script', async () => {
   const app = buildApp({ prisma, sessionSecret: 'test-secret' });
   const response = await app.inject({ method: 'GET', url: '/wallet/sw.js' });

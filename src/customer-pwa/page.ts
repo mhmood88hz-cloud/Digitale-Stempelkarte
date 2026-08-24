@@ -43,6 +43,8 @@ export function renderWalletPage(data: WalletPageData): string {
   .progress-bar { background: ${escapeHtml(data.brandColor)}; height: 100%; }
   .count { font-size: 2rem; font-weight: bold; }
   .reward { margin-top: 1rem; padding: 0.75rem; border-radius: 8px; background: #dcfce7; color: #14532d; }
+  .google-wallet-link { display: inline-block; margin-top: 1rem; }
+  .google-wallet-link img { height: 48px; }
 </style>
 </head>
 <body>
@@ -51,6 +53,7 @@ export function renderWalletPage(data: WalletPageData): string {
   <div class="progress"><div class="progress-bar" style="width: ${progressPercent}%"></div></div>
   ${data.rewardReady ? `<div class="reward">Dein Rabatt ist bereit: ${rewardDescription}</div>` : ''}
   <p>Zeig diese Seite beim nächsten Besuch dem Personal, oder füge sie über "Zum Home-Bildschirm hinzufügen" deinem Startbildschirm hinzu.</p>
+  <a class="google-wallet-link" href="/wallet/${encodeURIComponent(data.serialNumber)}/google-save-link">Zu Google Wallet hinzufügen</a>
 <script>
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/wallet/sw.js').catch(function () {});
