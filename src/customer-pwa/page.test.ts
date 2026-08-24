@@ -10,6 +10,7 @@ const BASE = {
   rewardReady: false,
   rewardDescription: '10 EUR Rabatt',
   serialNumber: 'LC-abc123',
+  showGoogleWalletLink: true,
 };
 
 test('renders the salon name and stamp progress', () => {
@@ -41,4 +42,15 @@ test('escapes HTML in salon name and reward description to prevent injection', (
 test('links to the per-card manifest URL', () => {
   const html = renderWalletPage(BASE);
   assert.match(html, /\/wallet\/LC-abc123\/manifest\.webmanifest/);
+});
+
+test('hides the Google Wallet link when showGoogleWalletLink is false (e.g. on iPhone)', () => {
+  const html = renderWalletPage({ ...BASE, showGoogleWalletLink: false });
+  assert.doesNotMatch(html, /google-save-link/);
+  assert.doesNotMatch(html, /Zu Google Wallet hinzufügen/);
+});
+
+test('shows the Google Wallet link when showGoogleWalletLink is true', () => {
+  const html = renderWalletPage(BASE);
+  assert.match(html, /google-save-link/);
 });

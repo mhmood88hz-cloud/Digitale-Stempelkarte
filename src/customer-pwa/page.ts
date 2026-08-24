@@ -6,6 +6,7 @@ export interface WalletPageData {
   rewardReady: boolean;
   rewardDescription: string;
   serialNumber: string;
+  showGoogleWalletLink: boolean;
 }
 
 function escapeHtml(value: string): string {
@@ -53,7 +54,11 @@ export function renderWalletPage(data: WalletPageData): string {
   <div class="progress"><div class="progress-bar" style="width: ${progressPercent}%"></div></div>
   ${data.rewardReady ? `<div class="reward">Dein Rabatt ist bereit: ${rewardDescription}</div>` : ''}
   <p>Zeig diese Seite beim nächsten Besuch dem Personal, oder füge sie über "Zum Home-Bildschirm hinzufügen" deinem Startbildschirm hinzu.</p>
-  <a class="google-wallet-link" href="/wallet/${encodeURIComponent(data.serialNumber)}/google-save-link">Zu Google Wallet hinzufügen</a>
+  ${
+    data.showGoogleWalletLink
+      ? `<a class="google-wallet-link" href="/wallet/${encodeURIComponent(data.serialNumber)}/google-save-link">Zu Google Wallet hinzufügen</a>`
+      : ''
+  }
 <script>
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/wallet/sw.js').catch(function () {});

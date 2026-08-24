@@ -6,6 +6,7 @@ import { buildManifest } from './manifest';
 import { loadGoogleWalletCredentials } from '../googlewallet/credentials';
 import { buildSaveLink } from '../googlewallet/saveLink';
 import { DEFAULT_PROGRAM_LOGO_URL, buildLoyaltyObjectId } from '../googlewallet/loyaltyObject';
+import { isAppleMobileDevice } from './deviceDetection';
 
 export interface CustomerPwaRoutesOptions {
   prisma: PrismaClient;
@@ -33,6 +34,7 @@ export function registerCustomerPwaRoutes(app: FastifyInstance, options: Custome
         rewardReady: card.stampCount >= salon.stampsRequired,
         rewardDescription: salon.rewardDescription,
         serialNumber: card.serialNumber,
+        showGoogleWalletLink: !isAppleMobileDevice(request.headers['user-agent']),
       }),
     );
   });

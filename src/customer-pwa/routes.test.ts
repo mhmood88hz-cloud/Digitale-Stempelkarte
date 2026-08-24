@@ -48,6 +48,27 @@ test('GET /wallet/:serialNumber shows the card (public, no auth needed)', async 
   }
 });
 
+test('GET /wallet/:serialNumber hides the Google Wallet link for an iPhone User-Agent', async () => {
+  const app = buildApp({ prisma, sessionSecret: 'test-secret' });
+  const slug = `test-pwa-${Date.now()}`;
+  try {
+    const { serialNumber } = await setupSalonWithCard(app, slug);
+    const response = await app.inject({
+      method: 'GET',
+      url: `/wallet/${serialNumber}`,
+      headers: {
+        'user-agent':
+          'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+      },
+    });
+    assert.equal(response.statusCode, 200);
+    assert.doesNotMatch(response.body, /google-save-link/);
+  } finally {
+    await cleanupSalon(slug);
+    await app.close();
+  }
+});
+
 test('GET /wallet/:serialNumber returns 404 for an unknown serial', async () => {
   const app = buildApp({ prisma, sessionSecret: 'test-secret' });
   const response = await app.inject({ method: 'GET', url: '/wallet/LC-does-not-exist' });
