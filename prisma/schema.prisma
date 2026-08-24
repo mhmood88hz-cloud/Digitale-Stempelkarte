@@ -54,15 +54,22 @@ model Customer {
   @@map("customers")
 }
 
+enum WalletMode {
+  pwa
+  apple
+  google
+}
+
 model LoyaltyCard {
-  id              String   @id @default(uuid())
+  id              String     @id @default(uuid())
   customerId      String
   salonId         String
-  serialNumber    String   @unique
-  stampCount      Int      @default(0)
+  serialNumber    String     @unique
+  stampCount      Int        @default(0)
+  walletMode      WalletMode @default(pwa)
   appleAuthToken  String?
   googleObjectId  String?
-  createdAt       DateTime @default(now())
+  createdAt       DateTime   @default(now())
 
   customer    Customer     @relation(fields: [customerId], references: [id])
   salon       Salon        @relation(fields: [salonId], references: [id])

@@ -4,6 +4,7 @@ import { attachSession } from './auth/tenantGuard';
 import { registerAuthRoutes } from './auth/routes';
 import { registerLoyaltyRoutes } from './loyalty/routes';
 import { registerWebStaffRoutes } from './web-staff/routes';
+import { registerCustomerPwaRoutes } from './customer-pwa/routes';
 
 export interface BuildAppOptions {
   prisma: PrismaClient;
@@ -21,6 +22,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   registerAuthRoutes(app, options);
   registerLoyaltyRoutes(app, options);
   registerWebStaffRoutes(app);
+  registerCustomerPwaRoutes(app, options);
 
   return app;
 }
