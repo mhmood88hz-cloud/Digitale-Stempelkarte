@@ -22,7 +22,7 @@ test('POST /api/billing/checkout requires authentication', async () => {
   const response = await app.inject({
     method: 'POST',
     url: '/api/billing/checkout',
-    payload: { planId: 'starter', successUrl: 'https://example.com/ok', cancelUrl: 'https://example.com/cancel' },
+    payload: { successUrl: 'https://example.com/ok', cancelUrl: 'https://example.com/cancel' },
   });
   assert.equal(response.statusCode, 401);
   await app.close();
@@ -55,7 +55,7 @@ test('POST /api/billing/checkout is rejected for a non-owner staff session', asy
       method: 'POST',
       url: '/api/billing/checkout',
       headers: { cookie: staffCookie },
-      payload: { planId: 'starter', successUrl: 'https://example.com/ok', cancelUrl: 'https://example.com/cancel' },
+      payload: { successUrl: 'https://example.com/ok', cancelUrl: 'https://example.com/cancel' },
     });
     assert.equal(response.statusCode, 403);
   } finally {
@@ -63,6 +63,39 @@ test('POST /api/billing/checkout is rejected for a non-owner staff session', asy
     await app.close();
   }
 });
+
+const billingFullyConfigured = Boolean(
+  process.env.STRIPE_SECRET_KEY && process.env.STRIPE_PRICE_STARTER && process.env.STRIPE_PRICE_STANDARD,
+);
+
+test(
+  'POST /api/billing/checkout creates a real Stripe Checkout Session (starter price, <=100 customers)',
+  { skip: !billingFullyConfigured && 'STRIPE_SECRET_KEY/STRIPE_PRICE_STARTER/STRIPE_PRICE_STANDARD not fully configured' },
+  async () => {
+    const app = buildApp({ prisma, sessionSecret: 'test-secret' });
+    const slug = uniqueSlug();
+    try {
+      const signup = await app.inject({
+        method: 'POST',
+        url: '/auth/signup',
+        payload: { salonName: 'Billing Checkout Test Salon', slug, ownerEmail: 'owner@example.com', password: 'supersecret1' },
+      });
+      const cookie = String(signup.headers['set-cookie']);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/billing/checkout',
+        headers: { cookie },
+        payload: { successUrl: 'https://example.com/ok', cancelUrl: 'https://example.com/cancel' },
+      });
+      assert.equal(response.statusCode, 200);
+      assert.match(response.json().checkoutUrl, /^https:\/\/checkout\.stripe\.com\//);
+    } finally {
+      await cleanupSalon(slug);
+      await app.close();
+    }
+  },
+);
 
 test('POST /api/billing/webhook rejects a request with no Stripe-Signature header', async () => {
   const app = buildApp({ prisma, sessionSecret: 'test-secret' });

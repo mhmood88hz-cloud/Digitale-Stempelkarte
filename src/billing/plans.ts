@@ -17,6 +17,21 @@ export function findBillingPlan(planId: string): BillingPlan | undefined {
   return BILLING_PLANS.find((plan) => plan.id === planId);
 }
 
+/** Customer count above which a salon is billed 'standard' instead of 'starter'. Chosen by the
+ * salon's current customer count, not a manual choice at checkout -- see the checkout route. */
+export const STANDARD_TIER_CUSTOMER_THRESHOLD = 100;
+
+/**
+ * Picks the plan id for a salon based on how many customers it currently has. Deliberately
+ * evaluated only at checkout time, not kept in sync afterwards -- a salon that grows past the
+ * threshold mid-subscription keeps its current price until it resubscribes/upgrades. Automatic
+ * mid-cycle upgrades would need a scheduled job calling Stripe's subscription-update API; out of
+ * scope for now, tracked as a deliberate follow-up rather than silently missing.
+ */
+export function planIdForCustomerCount(customerCount: number): string {
+  return customerCount > STANDARD_TIER_CUSTOMER_THRESHOLD ? 'standard' : 'starter';
+}
+
 /** Resolves a plan id to its configured Stripe Price id. Throws with a clear message if the
  * plan is unknown or its env var isn't set, rather than failing later with a confusing Stripe
  * API error. */

@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
 import { requireOwner } from '../auth/tenantGuard';
 import { getSalon } from '../admin/salonRepository';
-import { resolvePriceId } from './plans';
+import { resolvePriceId, planIdForCustomerCount } from './plans';
 import { loadStripeClient } from './stripeClient';
 import { createCheckoutSession } from './checkoutSession';
 import { verifyWebhookEvent, handleWebhookEvent } from './webhookHandler';
@@ -12,7 +12,6 @@ export interface BillingRoutesOptions {
 }
 
 interface CheckoutBody {
-  planId: string;
   successUrl: string;
   cancelUrl: string;
 }
@@ -27,9 +26,8 @@ export function registerBillingRoutes(app: FastifyInstance, options: BillingRout
       schema: {
         body: {
           type: 'object',
-          required: ['planId', 'successUrl', 'cancelUrl'],
+          required: ['successUrl', 'cancelUrl'],
           properties: {
-            planId: { type: 'string', minLength: 1 },
             successUrl: { type: 'string', minLength: 1 },
             cancelUrl: { type: 'string', minLength: 1 },
           },
@@ -37,16 +35,20 @@ export function registerBillingRoutes(app: FastifyInstance, options: BillingRout
       },
     },
     async (request, reply) => {
+      const salonId = request.session!.salonId;
+      const customerCount = await prisma.customer.count({ where: { salonId } });
+      const planId = planIdForCustomerCount(customerCount);
+
       let priceId: string;
       let stripe;
       try {
-        priceId = resolvePriceId(request.body.planId);
+        priceId = resolvePriceId(planId);
         stripe = loadStripeClient();
       } catch {
         return reply.code(503).send({ error: 'billing_not_configured' });
       }
 
-      const salon = await getSalon(prisma, request.session!.salonId);
+      const salon = await getSalon(prisma, salonId);
       const staffUser = await prisma.staffUser.findUniqueOrThrow({ where: { id: request.session!.staffUserId } });
 
       const session = await createCheckoutSession(stripe, {
