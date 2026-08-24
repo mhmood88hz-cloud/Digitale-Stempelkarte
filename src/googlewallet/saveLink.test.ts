@@ -46,3 +46,14 @@ test('the signed payload embeds exactly one loyalty object with the current stam
   assert.equal(payload.payload.loyaltyObjects.length, 1);
   assert.deepEqual(payload.payload.loyaltyObjects[0].loyaltyPoints.balance, { string: '4 / 10' });
 });
+
+test('the signed payload also embeds the loyalty class the object references (auto-provisions on first save)', () => {
+  const link = buildSaveLink(INPUT);
+  const jwt = link.replace('https://pay.google.com/gp/v/save/', '');
+  const payload = JSON.parse(Buffer.from(jwt.split('.')[1], 'base64url').toString('utf8'));
+
+  assert.equal(payload.payload.loyaltyClasses.length, 1);
+  const [loyaltyClass] = payload.payload.loyaltyClasses;
+  assert.equal(loyaltyClass.id, `${INPUT.issuerId}.${INPUT.classSuffix}`);
+  assert.equal(loyaltyClass.id, payload.payload.loyaltyObjects[0].classId);
+});
