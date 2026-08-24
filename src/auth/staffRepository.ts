@@ -8,6 +8,7 @@ export interface CreateSalonWithOwnerInput {
 }
 
 export const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+export const TRIAL_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 /** Thrown when a salon slug is already taken (maps to Prisma's unique-constraint error P2002). */
 export class SlugTakenError extends Error {
@@ -31,6 +32,7 @@ export async function createSalonWithOwner(
       data: {
         name: input.salonName,
         slug: input.slug,
+        trialEndsAt: new Date(Date.now() + TRIAL_DURATION_MS),
         staffUsers: {
           create: {
             email: input.ownerEmail,

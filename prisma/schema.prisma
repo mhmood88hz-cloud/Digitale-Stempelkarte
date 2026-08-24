@@ -15,6 +15,8 @@ model Salon {
   brandColor         String   @default("#111111")
   stampsRequired     Int      @default(10)
   rewardDescription  String   @default("10 EUR Rabatt")
+  trialEndsAt        DateTime
+  subscriptionStatus String   @default("trial") // "trial" | "active" | "canceled"
   createdAt          DateTime @default(now())
 
   staffUsers   StaffUser[]
