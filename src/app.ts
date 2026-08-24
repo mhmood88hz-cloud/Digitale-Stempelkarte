@@ -2,6 +2,7 @@ import Fastify, { FastifyInstance } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
 import { attachSession } from './auth/tenantGuard';
 import { registerAuthRoutes } from './auth/routes';
+import { registerLoyaltyRoutes } from './loyalty/routes';
 
 export interface BuildAppOptions {
   prisma: PrismaClient;
@@ -17,6 +18,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   app.get('/health', async () => ({ status: 'ok' }));
 
   registerAuthRoutes(app, options);
+  registerLoyaltyRoutes(app, options);
 
   return app;
 }
