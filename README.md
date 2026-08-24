@@ -31,6 +31,25 @@ npm run dev                   # startet den Server auf PORT (Default 3000)
 
 Health-Check: `curl http://localhost:3000/health`
 
+### Optional: lokal über HTTPS testen (fürs Kamera-Scannen vom Handy)
+
+Kamera-Zugriff (`getUserMedia`) verlangt einen "Secure Context" -- ein
+`http://<lan-ip>`-Link vom Handy im WLAN reicht dafür nicht, nur `https://`
+oder `localhost`. Zum Testen reicht ein selbstsigniertes Zertifikat:
+
+```bash
+mkdir -p secrets
+openssl req -x509 -newkey rsa:2048 -nodes \
+  -keyout secrets/dev-https-key.pem -out secrets/dev-https-cert.pem -days 365 \
+  -subj "/CN=localhost" \
+  -addext "subjectAltName=DNS:localhost,IP:127.0.0.1,IP:<deine-lan-ip>"
+```
+
+`DEV_HTTPS_CERT_PATH`/`DEV_HTTPS_KEY_PATH` in `.env` setzen, Server neu
+starten. Das Handy zeigt beim ersten Aufruf eine
+Zertifikatswarnung -- "Erweitert" / "Trotzdem fortfahren" wählen, danach
+funktioniert die Kamera. Nur zum lokalen Testen, niemals in Produktion.
+
 ## Externe Voraussetzungen
 
 Die Wallet-Integrationen brauchen echte Anbieter-Accounts, bevor sie
