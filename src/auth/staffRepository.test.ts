@@ -10,7 +10,7 @@ function uniqueSlug(): string {
   return `test-trial-${crypto.randomUUID().slice(0, 8)}`;
 }
 
-test('a new salon starts on a 30-day trial', async () => {
+test('a new salon starts on a trial lasting TRIAL_DURATION_MS', async () => {
   const slug = uniqueSlug();
   const before = Date.now();
   try {

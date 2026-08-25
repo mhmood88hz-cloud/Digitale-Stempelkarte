@@ -8,7 +8,7 @@ export interface CreateSalonWithOwnerInput {
 }
 
 export const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
-export const TRIAL_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+export const TRIAL_DURATION_MS = 60 * 24 * 60 * 60 * 1000; // 60 days -- market-launch pilot period
 
 /** Thrown when a salon slug is already taken (maps to Prisma's unique-constraint error P2002). */
 export class SlugTakenError extends Error {
