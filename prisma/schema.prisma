@@ -3,8 +3,12 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Only meaningful when DATABASE_URL points at a connection pooler (e.g. Supabase's pgbouncer
+  // pooler) -- migrations need a direct, non-pooled connection. Harmless to leave unset for
+  // local dev (plain docker-compose Postgres, no pooler in front of it).
+  directUrl = env("DIRECT_URL")
 }
 
 model Salon {
