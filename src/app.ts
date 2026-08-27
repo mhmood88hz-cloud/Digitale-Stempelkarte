@@ -12,6 +12,7 @@ import { registerBillingRoutes } from './billing/routes';
 import { registerWebLoginRoutes } from './web-login/routes';
 import { registerWebSignupRoutes } from './web-signup/routes';
 import { registerPushRoutes } from './push/routes';
+import { registerCustomerJoinRoutes } from './customer-join/routes';
 
 export interface BuildAppOptions {
   prisma: PrismaClient;
@@ -48,6 +49,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   registerWebLoginRoutes(app);
   registerWebSignupRoutes(app);
   registerPushRoutes(app, options);
+  registerCustomerJoinRoutes(app, options);
 
   return app;
 }

@@ -29,6 +29,7 @@ export function renderAdminPage(): string {
   <div id="message"></div>
 
   <p>Login-Link für dein Personal: <a id="login-link" href="#"></a></p>
+  <p>Beitreten-Link für Kunden (z.B. als QR-Code im Laden aushängen): <a id="join-link" href="#" target="_blank"></a></p>
 
   <h2>Diesen Monat</h2>
   <div id="report">Lädt...</div>
@@ -120,6 +121,11 @@ export function renderAdminPage(): string {
       var loginUrl = '/salons/' + res.body.slug + '/login';
       loginLink.href = loginUrl;
       loginLink.textContent = window.location.origin + loginUrl;
+
+      var joinLink = document.getElementById('join-link');
+      var joinUrl = '/salons/' + res.body.slug + '/join';
+      joinLink.href = joinUrl;
+      joinLink.textContent = window.location.origin + joinUrl;
     });
   }
 
