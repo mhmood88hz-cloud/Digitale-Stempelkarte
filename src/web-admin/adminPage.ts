@@ -18,11 +18,18 @@ export function renderAdminPage(): string {
   #message { margin-top: 1rem; padding: 0.6rem; border-radius: 6px; display: none; }
   #message.ok { background: #dcfce7; color: #14532d; display: block; }
   #message.error { background: #fee2e2; color: #7f1d1d; display: block; }
+  #report { display: flex; gap: 1.5rem; margin-top: 0.5rem; }
+  .stat { text-align: center; }
+  .stat .value { font-size: 1.6rem; font-weight: bold; display: block; }
+  .stat .label { font-size: 0.8rem; color: #555; }
 </style>
 </head>
 <body>
   <h1>Salon-Verwaltung</h1>
   <div id="message"></div>
+
+  <h2>Diesen Monat</h2>
+  <div id="report">Lädt...</div>
 
   <h2>Einstellungen</h2>
   <label>Name<input id="name"></label>
@@ -155,8 +162,34 @@ export function renderAdminPage(): string {
     });
   });
 
+  function loadReport() {
+    api('/api/reports/monthly', { method: 'GET' }).then(function (res) {
+      var box = document.getElementById('report');
+      if (res.status !== 200) { box.textContent = 'Konnte Bericht nicht laden.'; return; }
+      box.innerHTML = '';
+      [
+        { value: res.body.newCustomers, label: 'Neue Kunden' },
+        { value: res.body.stampsIssued, label: 'Stempel' },
+        { value: res.body.redemptions, label: 'Rabatte eingelöst' },
+      ].forEach(function (stat) {
+        var el = document.createElement('div');
+        el.className = 'stat';
+        var value = document.createElement('span');
+        value.className = 'value';
+        value.textContent = stat.value;
+        var label = document.createElement('span');
+        label.className = 'label';
+        label.textContent = stat.label;
+        el.appendChild(value);
+        el.appendChild(label);
+        box.appendChild(el);
+      });
+    });
+  }
+
   loadSalon();
   loadStaff();
+  loadReport();
 })();
 </script>
 </body>
