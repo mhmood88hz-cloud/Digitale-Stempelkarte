@@ -22,12 +22,20 @@ export function renderScanPage(): string {
   input, button { font-size: 1.1rem; padding: 0.6rem; width: 100%; box-sizing: border-box; margin-top: 0.5rem; }
   button { cursor: pointer; }
   #video { width: 100%; display: none; margin-top: 0.5rem; border-radius: 8px; }
-  #result { margin-top: 1rem; padding: 0.75rem; border-radius: 8px; display: none; }
-  #result.ok { background: #dcfce7; color: #14532d; display: block; }
-  #result.error { background: #fee2e2; color: #7f1d1d; display: block; }
+  #result, #new-customer-result { margin-top: 1rem; padding: 0.75rem; border-radius: 8px; display: none; }
+  #result.ok, #new-customer-result.ok { background: #dcfce7; color: #14532d; display: block; }
+  #result.error, #new-customer-result.error { background: #fee2e2; color: #7f1d1d; display: block; }
+  #new-customer-result a { display: inline-block; margin-top: 0.4rem; }
+  h1 { margin-top: 2rem; }
+  h1:first-child { margin-top: 0; }
 </style>
 </head>
 <body>
+  <h1>Neuer Kunde</h1>
+  <input id="new-customer-name" type="text" placeholder="Name" autocomplete="off">
+  <button id="new-customer-button" type="button">Kunde anlegen</button>
+  <div id="new-customer-result"></div>
+
   <h1>Stempel vergeben</h1>
   <input id="serial-input" type="text" placeholder="Seriennummer (z.B. LC-...)" autocomplete="off">
   <button id="stamp-button" type="button">Stempel geben</button>
@@ -93,6 +101,45 @@ export function renderScanPage(): string {
       showResult('Netzwerkfehler.', false);
     });
   }
+
+  var newCustomerNameInput = document.getElementById('new-customer-name');
+  var newCustomerButton = document.getElementById('new-customer-button');
+  var newCustomerResult = document.getElementById('new-customer-result');
+
+  newCustomerButton.addEventListener('click', function () {
+    var name = newCustomerNameInput.value.trim();
+    if (!name) {
+      newCustomerResult.textContent = 'Bitte einen Namen eingeben.';
+      newCustomerResult.className = 'error';
+      return;
+    }
+    fetch('/api/customers', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name }),
+    }).then(function (response) {
+      return response.json().then(function (body) { return { status: response.status, body: body }; });
+    }).then(function (res) {
+      if (res.status === 201) {
+        var serial = res.body.loyaltyCard.serialNumber;
+        newCustomerResult.innerHTML = 'Angelegt: ' + res.body.customer.name +
+          '<br><a href="/wallet/' + encodeURIComponent(serial) + '" target="_blank">Kundenkarte ansehen</a>';
+        newCustomerResult.className = 'ok';
+        serialInput.value = serial;
+        newCustomerNameInput.value = '';
+      } else if (res.status === 401) {
+        newCustomerResult.textContent = 'Nicht angemeldet.';
+        newCustomerResult.className = 'error';
+      } else {
+        newCustomerResult.textContent = 'Fehler beim Anlegen.';
+        newCustomerResult.className = 'error';
+      }
+    }).catch(function () {
+      newCustomerResult.textContent = 'Netzwerkfehler.';
+      newCustomerResult.className = 'error';
+    });
+  });
 
   stampButton.addEventListener('click', function () {
     handle('/api/stamps', function (body) {

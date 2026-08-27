@@ -28,6 +28,8 @@ export function renderAdminPage(): string {
   <h1>Salon-Verwaltung</h1>
   <div id="message"></div>
 
+  <p>Login-Link für dein Personal: <a id="login-link" href="#"></a></p>
+
   <h2>Diesen Monat</h2>
   <div id="report">Lädt...</div>
 
@@ -114,6 +116,10 @@ export function renderAdminPage(): string {
       document.getElementById('reminderIntervalDays').value = res.body.reminderIntervalDays === null ? '' : res.body.reminderIntervalDays;
       document.getElementById('locationLat').value = res.body.locationLat === null ? '' : res.body.locationLat;
       document.getElementById('locationLng').value = res.body.locationLng === null ? '' : res.body.locationLng;
+      var loginLink = document.getElementById('login-link');
+      var loginUrl = '/salons/' + res.body.slug + '/login';
+      loginLink.href = loginUrl;
+      loginLink.textContent = window.location.origin + loginUrl;
     });
   }
 

@@ -28,6 +28,7 @@ test('GET /staff/scan serves the scan dashboard HTML once authenticated', async 
     assert.match(response.headers['content-type'] as string, /text\/html/);
     assert.match(response.body, /serial-input/);
     assert.match(response.body, /stamp-button/);
+    assert.match(response.body, /new-customer-button/);
     assert.match(response.body, /\/staff\/jsqr\.js/);
   } finally {
     const salon = await prisma.salon.findUnique({ where: { slug } });
