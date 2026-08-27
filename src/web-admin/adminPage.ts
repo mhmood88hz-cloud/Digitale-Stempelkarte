@@ -38,6 +38,13 @@ export function renderAdminPage(): string {
   <label>Rabatt-Beschreibung<input id="rewardDescription"></label>
   <button id="save-settings" type="button">Speichern</button>
 
+  <h2>Kunden-Erinnerungen</h2>
+  <label>Erinnerung nach X Tagen ohne Besuch (leer = aus)<input id="reminderIntervalDays" type="number" min="1"></label>
+  <label>Standort Breitengrad (optional, für Google Wallet "in der Nähe")<input id="locationLat" type="number" step="any"></label>
+  <label>Standort Längengrad (optional)<input id="locationLng" type="number" step="any"></label>
+  <button id="send-reminders" type="button">Erinnerungen jetzt senden</button>
+  <div id="reminder-send-status"></div>
+
   <h2>Personal</h2>
   <table id="staff-table"><thead><tr><th>E-Mail</th><th>Rolle</th><th></th></tr></thead><tbody></tbody></table>
   <label>Neue E-Mail<input id="new-staff-email" type="email"></label>
@@ -60,6 +67,21 @@ export function renderAdminPage(): string {
       if (!Number.isInteger(n) || n < 1) throw new Error('Stempelanzahl muss eine positive ganze Zahl sein.');
       body.stampsRequired = n;
     }
+    if (input.reminderIntervalDays !== undefined) {
+      var trimmedInterval = String(input.reminderIntervalDays).trim();
+      if (trimmedInterval === '') {
+        body.reminderIntervalDays = null;
+      } else {
+        var days = Number(trimmedInterval);
+        if (!Number.isInteger(days) || days < 1) throw new Error('Erinnerungsintervall muss eine positive ganze Zahl sein.');
+        body.reminderIntervalDays = days;
+      }
+    }
+    ['locationLat', 'locationLng'].forEach(function (key) {
+      if (input[key] === undefined) return;
+      var trimmedCoord = String(input[key]).trim();
+      body[key] = trimmedCoord === '' ? null : Number(trimmedCoord);
+    });
     return body;
   }
 
@@ -89,6 +111,9 @@ export function renderAdminPage(): string {
       document.getElementById('brandColor').value = res.body.brandColor;
       document.getElementById('stampsRequired').value = res.body.stampsRequired;
       document.getElementById('rewardDescription').value = res.body.rewardDescription;
+      document.getElementById('reminderIntervalDays').value = res.body.reminderIntervalDays === null ? '' : res.body.reminderIntervalDays;
+      document.getElementById('locationLat').value = res.body.locationLat === null ? '' : res.body.locationLat;
+      document.getElementById('locationLng').value = res.body.locationLng === null ? '' : res.body.locationLng;
     });
   }
 
@@ -131,6 +156,9 @@ export function renderAdminPage(): string {
         brandColor: document.getElementById('brandColor').value,
         stampsRequired: document.getElementById('stampsRequired').value,
         rewardDescription: document.getElementById('rewardDescription').value,
+        reminderIntervalDays: document.getElementById('reminderIntervalDays').value,
+        locationLat: document.getElementById('locationLat').value,
+        locationLng: document.getElementById('locationLng').value,
       });
     } catch (err) {
       showMessage(err.message, false);
@@ -186,6 +214,17 @@ export function renderAdminPage(): string {
       });
     });
   }
+
+  document.getElementById('send-reminders').addEventListener('click', function () {
+    var statusBox = document.getElementById('reminder-send-status');
+    statusBox.textContent = 'Sende...';
+    api('/api/reminders/send', { method: 'POST' }).then(function (res) {
+      if (res.status === 200) statusBox.textContent = res.body.sent + ' Kunde(n) erinnert.';
+      else if (res.status === 503) statusBox.textContent = 'Erinnerungen sind nicht konfiguriert.';
+      else if (res.status === 403) statusBox.textContent = 'Nur der Owner darf Erinnerungen senden.';
+      else statusBox.textContent = 'Fehler beim Senden.';
+    });
+  });
 
   loadSalon();
   loadStaff();

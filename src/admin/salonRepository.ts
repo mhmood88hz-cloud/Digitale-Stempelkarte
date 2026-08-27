@@ -6,6 +6,10 @@ export interface SalonSettingsPatch {
   stampsRequired?: number;
   rewardDescription?: string;
   logoUrl?: string;
+  /** null explicitly disables reminders; undefined leaves the current setting unchanged. */
+  reminderIntervalDays?: number | null;
+  locationLat?: number | null;
+  locationLng?: number | null;
 }
 
 export async function getSalon(prisma: PrismaClient, salonId: string): Promise<Salon> {

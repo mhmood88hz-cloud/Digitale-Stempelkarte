@@ -46,6 +46,8 @@ export function renderWalletPage(data: WalletPageData): string {
   .reward { margin-top: 1rem; padding: 0.75rem; border-radius: 8px; background: #dcfce7; color: #14532d; }
   .google-wallet-link { display: inline-block; margin-top: 1rem; }
   .google-wallet-link img { height: 48px; }
+  #enable-reminders { margin-top: 1rem; padding: 0.6rem 1rem; font-size: 0.95rem; cursor: pointer; }
+  #reminder-status { margin-top: 0.5rem; font-size: 0.85rem; color: #555; }
 </style>
 </head>
 <body>
@@ -59,10 +61,64 @@ export function renderWalletPage(data: WalletPageData): string {
       ? `<a class="google-wallet-link" href="/wallet/${encodeURIComponent(data.serialNumber)}/google-save-link">Zu Google Wallet hinzufügen</a>`
       : ''
   }
+  <button id="enable-reminders" type="button">Erinnerungen aktivieren</button>
+  <div id="reminder-status"></div>
 <script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/wallet/sw.js').catch(function () {});
+(function () {
+  var serialNumber = ${JSON.stringify(data.serialNumber)};
+  var statusBox = document.getElementById('reminder-status');
+
+  function urlBase64ToUint8Array(base64String) {
+    var padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    var rawData = atob(base64);
+    var outputArray = new Uint8Array(rawData.length);
+    for (var i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+    return outputArray;
   }
+
+  var registrationPromise = ('serviceWorker' in navigator)
+    ? navigator.serviceWorker.register('/wallet/sw.js').catch(function () { return null; })
+    : Promise.resolve(null);
+
+  document.getElementById('enable-reminders').addEventListener('click', function () {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      statusBox.textContent = 'Erinnerungen werden von diesem Browser nicht unterstützt.';
+      return;
+    }
+    Notification.requestPermission().then(function (permission) {
+      if (permission !== 'granted') {
+        statusBox.textContent = 'Erlaubnis für Benachrichtigungen wurde nicht erteilt.';
+        return;
+      }
+      Promise.all([registrationPromise, fetch('/push/vapid-public-key').then(function (r) { return r.json(); })])
+        .then(function (results) {
+          var registration = results[0];
+          var vapid = results[1];
+          if (!registration || !vapid.publicKey) {
+            statusBox.textContent = 'Erinnerungen sind aktuell nicht verfügbar.';
+            return;
+          }
+          return registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(vapid.publicKey),
+          }).then(function (subscription) {
+            return fetch('/wallet/' + encodeURIComponent(serialNumber) + '/push-subscribe', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(subscription.toJSON()),
+            });
+          });
+        })
+        .then(function () {
+          statusBox.textContent = 'Erinnerungen sind jetzt aktiv.';
+        })
+        .catch(function () {
+          statusBox.textContent = 'Erinnerungen konnten nicht aktiviert werden.';
+        });
+    });
+  });
+})();
 </script>
 </body>
 </html>`;

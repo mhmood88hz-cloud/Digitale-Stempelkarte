@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient, Salon } from '@prisma/client';
 import { requireAuth, requireOwner } from '../auth/tenantGuard';
 import { hashPassword } from '../auth/password';
 import { getSalon, updateSalonSettings, type SalonSettingsPatch } from './salonRepository';
@@ -22,20 +22,27 @@ interface AddStaffBody {
   role?: 'owner' | 'staff';
 }
 
+function serializeSalon(salon: Salon) {
+  return {
+    id: salon.id,
+    name: salon.name,
+    slug: salon.slug,
+    logoUrl: salon.logoUrl,
+    brandColor: salon.brandColor,
+    stampsRequired: salon.stampsRequired,
+    rewardDescription: salon.rewardDescription,
+    reminderIntervalDays: salon.reminderIntervalDays,
+    locationLat: salon.locationLat,
+    locationLng: salon.locationLng,
+  };
+}
+
 export function registerAdminRoutes(app: FastifyInstance, options: AdminRoutesOptions): void {
   const { prisma } = options;
 
   app.get('/api/salon', { preHandler: requireAuth }, async (request) => {
     const salon = await getSalon(prisma, request.session!.salonId);
-    return {
-      id: salon.id,
-      name: salon.name,
-      slug: salon.slug,
-      logoUrl: salon.logoUrl,
-      brandColor: salon.brandColor,
-      stampsRequired: salon.stampsRequired,
-      rewardDescription: salon.rewardDescription,
-    };
+    return serializeSalon(salon);
   });
 
   app.patch<{ Body: SalonSettingsPatch }>(
@@ -51,6 +58,9 @@ export function registerAdminRoutes(app: FastifyInstance, options: AdminRoutesOp
             stampsRequired: { type: 'integer', minimum: 1 },
             rewardDescription: { type: 'string', minLength: 1 },
             logoUrl: { type: 'string', minLength: 1 },
+            reminderIntervalDays: { type: ['integer', 'null'], minimum: 1 },
+            locationLat: { type: ['number', 'null'], minimum: -90, maximum: 90 },
+            locationLng: { type: ['number', 'null'], minimum: -180, maximum: 180 },
           },
           additionalProperties: false,
         },
@@ -58,15 +68,7 @@ export function registerAdminRoutes(app: FastifyInstance, options: AdminRoutesOp
     },
     async (request) => {
       const salon = await updateSalonSettings(prisma, request.session!.salonId, request.body);
-      return {
-        id: salon.id,
-        name: salon.name,
-        slug: salon.slug,
-        logoUrl: salon.logoUrl,
-        brandColor: salon.brandColor,
-        stampsRequired: salon.stampsRequired,
-        rewardDescription: salon.rewardDescription,
-      };
+      return serializeSalon(salon);
     },
   );
 

@@ -15,6 +15,21 @@ export interface CustomerPwaRoutesOptions {
 const SERVICE_WORKER_SOURCE = `self.addEventListener('fetch', function (event) {
   event.respondWith(fetch(event.request));
 });
+
+self.addEventListener('push', function (event) {
+  var data = { title: 'Stempelkarte', body: 'Neue Nachricht.', url: '/' };
+  try { data = event.data ? event.data.json() : data; } catch (err) {}
+  event.waitUntil(self.registration.showNotification(data.title, {
+    body: data.body,
+    data: { url: data.url },
+  }));
+});
+
+self.addEventListener('notificationclick', function (event) {
+  event.notification.close();
+  var url = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil(clients.openWindow(url));
+});
 `;
 
 export function registerCustomerPwaRoutes(app: FastifyInstance, options: CustomerPwaRoutesOptions): void {
