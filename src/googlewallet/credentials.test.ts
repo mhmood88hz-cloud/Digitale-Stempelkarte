@@ -23,6 +23,16 @@ test('loads issuer id and parses the service account key file', () => {
   }
 });
 
+test('loads credentials from raw JSON content directly (no file needed)', () => {
+  const rawJson = JSON.stringify({
+    client_email: 'wallet@example.iam.gserviceaccount.com',
+    private_key: '-----BEGIN PRIVATE KEY-----\nfake\n-----END PRIVATE KEY-----',
+  });
+  const creds = loadGoogleWalletCredentials({ GOOGLE_WALLET_ISSUER_ID: '12345', GOOGLE_WALLET_SERVICE_ACCOUNT_JSON: rawJson });
+  assert.equal(creds.issuerId, '12345');
+  assert.equal(creds.serviceAccountEmail, 'wallet@example.iam.gserviceaccount.com');
+});
+
 test('throws a clear error when GOOGLE_WALLET_ISSUER_ID is missing', () => {
   assert.throws(
     () => loadGoogleWalletCredentials({ GOOGLE_WALLET_SERVICE_ACCOUNT_JSON: 'irrelevant.json' }),
