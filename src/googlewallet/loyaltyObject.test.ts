@@ -39,4 +39,20 @@ test('loyalty object payload carries the stamp progress and a QR barcode of the 
   assert.equal(payload.classId, '3388000000012345.salon-beispiel');
   assert.deepEqual(payload.loyaltyPoints, { label: 'Stempel', balance: { string: '4 / 10' } });
   assert.deepEqual(payload.barcode, { type: 'QR_CODE', value: 'LC-abc123' });
+  assert.equal('locations' in payload, false);
+});
+
+test('loyalty object payload includes relevant locations only when a location is given', () => {
+  const withLocation = buildLoyaltyObjectPayload({
+    issuerId: '3388000000012345',
+    classSuffix: 'salon-beispiel',
+    serialNumber: 'LC-abc123',
+    salonName: 'Salon Beispiel',
+    stampCount: 4,
+    stampsRequired: 10,
+    hexBackgroundColor: '#ff0000',
+    programLogoUrl: 'https://example.com/logo.png',
+    location: { lat: 52.52, lng: 13.405 },
+  });
+  assert.deepEqual(withLocation.locations, [{ latitude: 52.52, longitude: 13.405 }]);
 });

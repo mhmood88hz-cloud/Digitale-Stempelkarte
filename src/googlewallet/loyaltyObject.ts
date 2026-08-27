@@ -7,6 +7,10 @@ export interface LoyaltyObjectInput {
   stampsRequired: number;
   hexBackgroundColor: string;
   programLogoUrl: string;
+  /** Salon's physical location. When set, Google Wallet surfaces this pass on the customer's
+   * lock screen automatically when they're nearby -- handled entirely by the OS, no push
+   * infrastructure of ours involved. Omit to leave the feature unused. */
+  location?: { lat: number; lng: number };
 }
 
 // Public placeholder logo, used only when a salon hasn't uploaded its own (Salon.logoUrl).
@@ -58,5 +62,8 @@ export function buildLoyaltyObjectPayload(input: LoyaltyObjectInput): Record<str
       type: 'QR_CODE',
       value: input.serialNumber,
     },
+    ...(input.location
+      ? { locations: [{ latitude: input.location.lat, longitude: input.location.lng }] }
+      : {}),
   };
 }

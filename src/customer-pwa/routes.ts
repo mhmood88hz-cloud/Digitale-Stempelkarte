@@ -84,6 +84,10 @@ export function registerCustomerPwaRoutes(app: FastifyInstance, options: Custome
       stampsRequired: salon.stampsRequired,
       hexBackgroundColor: salon.brandColor,
       programLogoUrl: salon.logoUrl ?? DEFAULT_PROGRAM_LOGO_URL,
+      location:
+        salon.locationLat !== null && salon.locationLng !== null
+          ? { lat: salon.locationLat, lng: salon.locationLng }
+          : undefined,
     });
 
     // Optimistic: we have no server-to-server callback from Google when the customer actually

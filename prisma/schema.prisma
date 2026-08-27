@@ -23,6 +23,14 @@ model Salon {
   subscriptionStatus   String   @default("trial") // "trial" | "active" | "canceled"
   stripeCustomerId     String?  @unique
   stripeSubscriptionId String?  @unique
+  // Days of inactivity (no stamp) before a customer gets a "come back" reminder push.
+  // null = reminders disabled for this salon (default: off, salon opts in via settings).
+  reminderIntervalDays Int?
+  // Salon's physical location, used for Google Wallet's native "relevant locations" feature --
+  // the OS surfaces the pass on the lock screen when the customer is nearby, entirely handled
+  // by Google/Apple, no push infrastructure of ours involved. null = feature unused.
+  locationLat          Float?
+  locationLng          Float?
   createdAt            DateTime @default(now())
 
   staffUsers   StaffUser[]
@@ -69,23 +77,40 @@ enum WalletMode {
 }
 
 model LoyaltyCard {
-  id             String     @id @default(uuid())
-  customerId     String
-  salonId        String
-  serialNumber   String     @unique
-  stampCount     Int        @default(0)
-  walletMode     WalletMode @default(pwa)
-  appleAuthToken String?
-  googleObjectId String?
-  createdAt      DateTime   @default(now())
+  id                 String     @id @default(uuid())
+  customerId         String
+  salonId            String
+  serialNumber       String     @unique
+  stampCount         Int        @default(0)
+  walletMode         WalletMode @default(pwa)
+  appleAuthToken     String?
+  googleObjectId     String?
+  // Tracks the last "come back" reminder push so a customer isn't re-notified every time the
+  // salon's reminder job runs -- only null or older than reminderIntervalDays counts as due.
+  lastReminderSentAt DateTime?
+  createdAt          DateTime   @default(now())
 
-  customer    Customer     @relation(fields: [customerId], references: [id])
-  salon       Salon        @relation(fields: [salonId], references: [id])
-  stampEvents StampEvent[]
-  redemptions Redemption[]
+  customer          Customer           @relation(fields: [customerId], references: [id])
+  salon             Salon              @relation(fields: [salonId], references: [id])
+  stampEvents       StampEvent[]
+  redemptions       Redemption[]
+  pushSubscriptions PushSubscription[]
 
   @@index([salonId])
   @@map("loyalty_cards")
+}
+
+model PushSubscription {
+  id            String   @id @default(uuid())
+  loyaltyCardId String
+  endpoint      String   @unique
+  p256dhKey     String
+  authKey       String
+  createdAt     DateTime @default(now())
+
+  loyaltyCard LoyaltyCard @relation(fields: [loyaltyCardId], references: [id])
+
+  @@map("push_subscriptions")
 }
 
 model StampEvent {
