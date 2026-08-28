@@ -50,7 +50,7 @@ export function renderJoinPage(salonName: string, slug: string): string {
       return response.json().then(function (body) { return { status: response.status, body: body }; });
     }).then(function (res) {
       if (res.status === 201) {
-        window.location.href = '/wallet/' + encodeURIComponent(res.body.serialNumber);
+        window.location.href = res.body.redirectUrl || ('/wallet/' + encodeURIComponent(res.body.serialNumber));
       } else {
         errorBox.textContent = 'Bitte einen Namen eingeben.';
         errorBox.style.display = 'block';

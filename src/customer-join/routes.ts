@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
 import { renderJoinPage } from './joinPage';
 import { createCustomerWithCard } from '../loyalty/customerRepository';
+import { isAppleMobileDevice } from '../customer-pwa/deviceDetection';
 
 export interface CustomerJoinRoutesOptions {
   prisma: PrismaClient;
@@ -44,7 +45,17 @@ export function registerCustomerJoinRoutes(app: FastifyInstance, options: Custom
         name: request.body.name,
         phone: request.body.phone,
       });
-      return reply.code(201).send({ serialNumber: loyaltyCard.serialNumber });
+
+      // iPhone has no Google Wallet app to save into (see customer-pwa/deviceDetection.ts) --
+      // send it straight to the PWA card page instead of a dead-end Google save link. Every
+      // other device skips the intermediate page and goes directly into the real "Add to
+      // Google Wallet" flow, one fewer tap right after typing your name on a shared shop device.
+      const walletUrl = `/wallet/${encodeURIComponent(loyaltyCard.serialNumber)}`;
+      const redirectUrl = isAppleMobileDevice(request.headers['user-agent'])
+        ? walletUrl
+        : `${walletUrl}/google-save-link`;
+
+      return reply.code(201).send({ serialNumber: loyaltyCard.serialNumber, redirectUrl });
     },
   );
 }

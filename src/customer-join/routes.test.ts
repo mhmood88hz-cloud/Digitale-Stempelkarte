@@ -72,6 +72,50 @@ test('POST /salons/:slug/join creates a customer + card with no authentication',
   }
 });
 
+test('POST /salons/:slug/join redirects non-iPhone straight to the Google Wallet save link', async () => {
+  const app = buildApp({ prisma, sessionSecret: 'test-secret' });
+  const slug = uniqueSlug();
+  try {
+    await setupSalon(app, slug);
+    const response = await app.inject({
+      method: 'POST',
+      url: `/salons/${slug}/join`,
+      payload: { name: 'Android Kunde' },
+      headers: {
+        'user-agent': 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36',
+      },
+    });
+    assert.equal(response.statusCode, 201);
+    assert.match(response.json().redirectUrl, /\/google-save-link$/);
+  } finally {
+    await cleanupSalon(slug);
+    await app.close();
+  }
+});
+
+test('POST /salons/:slug/join redirects iPhone to the PWA wallet page, not Google Wallet', async () => {
+  const app = buildApp({ prisma, sessionSecret: 'test-secret' });
+  const slug = uniqueSlug();
+  try {
+    await setupSalon(app, slug);
+    const response = await app.inject({
+      method: 'POST',
+      url: `/salons/${slug}/join`,
+      payload: { name: 'iPhone Kunde' },
+      headers: {
+        'user-agent':
+          'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+      },
+    });
+    assert.equal(response.statusCode, 201);
+    const serialNumber = response.json().serialNumber;
+    assert.equal(response.json().redirectUrl, `/wallet/${serialNumber}`);
+  } finally {
+    await cleanupSalon(slug);
+    await app.close();
+  }
+});
+
 test('POST /salons/:slug/join requires a name', async () => {
   const app = buildApp({ prisma, sessionSecret: 'test-secret' });
   const slug = uniqueSlug();
