@@ -83,7 +83,14 @@ export function renderWalletPage(data: WalletPageData): string {
 
   document.getElementById('enable-reminders').addEventListener('click', function () {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-      statusBox.textContent = 'Erinnerungen werden von diesem Browser nicht unterstützt.';
+      var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      var isStandalone = window.navigator.standalone === true ||
+        (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+      if (isIOS && !isStandalone) {
+        statusBox.textContent = 'Bitte diese Seite zuerst ueber "Teilen" -> "Zum Home-Bildschirm hinzufuegen" speichern und dann von dort (nicht in Safari) oeffnen -- erst dann sind Erinnerungen moeglich.';
+      } else {
+        statusBox.textContent = 'Erinnerungen werden von diesem Browser nicht unterstützt.';
+      }
       return;
     }
     Notification.requestPermission().then(function (permission) {
