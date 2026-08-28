@@ -172,6 +172,38 @@ test('DELETE /api/staff/:id removes a staff member, but refuses to remove the la
   }
 });
 
+test('DELETE /api/staff/:id succeeds with a real browser fetch\'s headers (Content-Type set, empty JSON object body)', async () => {
+  // Regression test: the admin page's JS used to always set Content-Type: application/json even
+  // for requests with nothing to send -- Fastify's default JSON parser rejects a genuinely empty
+  // body under that content type (FST_ERR_CTP_EMPTY_JSON_BODY, found live: DELETE staff / POST
+  // reminders both 400'd in the real browser despite passing here before, because
+  // app.inject() without an explicit body doesn't send Content-Type at all, missing the bug).
+  // Fixed client-side (adminPage.ts's api() helper now defaults body to '{}'); this locks that in.
+  const app = buildApp({ prisma, sessionSecret: 'test-secret' });
+  const slug = uniqueSlug();
+  try {
+    const cookie = await signupSalon(app, slug);
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/staff',
+      headers: { cookie },
+      payload: { email: 'staff@example.com', password: 'staffpass1' },
+    });
+    const staffId = created.json().id;
+
+    const response = await app.inject({
+      method: 'DELETE',
+      url: `/api/staff/${staffId}`,
+      headers: { cookie, 'content-type': 'application/json' },
+      payload: '{}',
+    });
+    assert.equal(response.statusCode, 204);
+  } finally {
+    await cleanupSalon(slug);
+    await app.close();
+  }
+});
+
 test('staff management endpoints require authentication', async () => {
   const app = buildApp({ prisma, sessionSecret: 'test-secret' });
   const responses = await Promise.all([

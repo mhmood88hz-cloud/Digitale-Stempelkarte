@@ -106,7 +106,12 @@ export function renderAdminPage(): string {
   }
 
   function api(path, options) {
-    return fetch(path, Object.assign({ credentials: 'include', headers: { 'Content-Type': 'application/json' } }, options))
+    var opts = Object.assign({ credentials: 'include', headers: { 'Content-Type': 'application/json' } }, options);
+    // Fastify's JSON parser rejects an empty body sent with Content-Type: application/json
+    // (a POST/DELETE with no data of its own, e.g. "remove staff" or "send reminders") -- send
+    // an explicit empty object rather than nothing.
+    if (opts.body === undefined && opts.method && opts.method !== 'GET') opts.body = '{}';
+    return fetch(path, opts)
       .then(function (res) { return res.json().then(function (body) { return { status: res.status, body: body }; }); });
   }
 
