@@ -48,6 +48,9 @@ export function renderAdminPage(): string {
   <button id="send-reminders" type="button">Erinnerungen jetzt senden</button>
   <div id="reminder-send-status"></div>
 
+  <h2>Kunden</h2>
+  <table id="customers-table"><thead><tr><th>Name</th><th>Stempel</th><th>Erinnerungen</th><th></th></tr></thead><tbody></tbody></table>
+
   <h2>Personal</h2>
   <table id="staff-table"><thead><tr><th>E-Mail</th><th>Rolle</th><th></th></tr></thead><tbody></tbody></table>
   <label>Neue E-Mail<input id="new-staff-email" type="email"></label>
@@ -238,9 +241,53 @@ export function renderAdminPage(): string {
     });
   });
 
+  function loadCustomers() {
+    api('/api/customers', { method: 'GET' }).then(function (res) {
+      if (res.status !== 200) return;
+      var tbody = document.querySelector('#customers-table tbody');
+      tbody.innerHTML = '';
+      res.body.forEach(function (customer) {
+        var row = document.createElement('tr');
+
+        var nameCell = document.createElement('td');
+        nameCell.textContent = customer.name;
+
+        var stampCell = document.createElement('td');
+        stampCell.textContent = customer.stampCount;
+
+        var pushCell = document.createElement('td');
+        pushCell.textContent = customer.hasPushSubscription ? 'aktiv' : 'aus';
+
+        var actionCell = document.createElement('td');
+        var remindButton = document.createElement('button');
+        remindButton.type = 'button';
+        remindButton.textContent = 'Erinnerung senden';
+        remindButton.disabled = !customer.hasPushSubscription;
+        remindButton.addEventListener('click', function () {
+          remindButton.disabled = true;
+          api('/api/customers/' + encodeURIComponent(customer.serialNumber) + '/remind', { method: 'POST' })
+            .then(function (res2) {
+              if (res2.status === 200) showMessage(customer.name + ' wurde erinnert.', true);
+              else if (res2.status === 404) showMessage('Kunde hat keine Erinnerungen aktiviert.', false);
+              else showMessage('Erinnerung konnte nicht gesendet werden.', false);
+              remindButton.disabled = false;
+            });
+        });
+        actionCell.appendChild(remindButton);
+
+        row.appendChild(nameCell);
+        row.appendChild(stampCell);
+        row.appendChild(pushCell);
+        row.appendChild(actionCell);
+        tbody.appendChild(row);
+      });
+    });
+  }
+
   loadSalon();
   loadStaff();
   loadReport();
+  loadCustomers();
 })();
 </script>
 </body>

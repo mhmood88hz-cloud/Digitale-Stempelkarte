@@ -30,3 +30,38 @@ export async function createCustomerWithCard(
   });
   return { customer, loyaltyCard: customer.loyaltyCards[0] };
 }
+
+export interface CustomerListEntry {
+  customerId: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  loyaltyCardId: string;
+  serialNumber: string;
+  stampCount: number;
+  walletMode: string;
+  hasPushSubscription: boolean;
+}
+
+/** Lists a salon's customers with their card summary, newest first. */
+export async function listCustomersForSalon(prisma: PrismaClient, salonId: string): Promise<CustomerListEntry[]> {
+  const customers = await prisma.customer.findMany({
+    where: { salonId },
+    orderBy: { createdAt: 'desc' },
+    include: { loyaltyCards: { include: { pushSubscriptions: true } } },
+  });
+
+  return customers.flatMap((customer) =>
+    customer.loyaltyCards.map((card) => ({
+      customerId: customer.id,
+      name: customer.name,
+      phone: customer.phone,
+      email: customer.email,
+      loyaltyCardId: card.id,
+      serialNumber: card.serialNumber,
+      stampCount: card.stampCount,
+      walletMode: card.walletMode,
+      hasPushSubscription: card.pushSubscriptions.length > 0,
+    })),
+  );
+}

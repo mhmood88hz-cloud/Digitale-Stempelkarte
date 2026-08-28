@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
-import { findCardsDueForReminder, sendPushNotification, sendRemindersForSalon } from './reminders';
+import { findCardsDueForReminder, sendManualReminder, sendPushNotification, sendRemindersForSalon } from './reminders';
 import { saveSubscription } from './subscriptionRepository';
 
 const prisma = new PrismaClient();
@@ -122,4 +122,38 @@ test('sendRemindersForSalon is a no-op when reminderIntervalDays is not set', as
     reminderIntervalDays: null,
   });
   assert.deepEqual(result, { sent: 0 });
+});
+
+test('sendManualReminder reports no_subscription for a card with none', async () => {
+  const { salonId, serialNumber } = await setupSalonWithCard(0);
+  try {
+    const result = await sendManualReminder(prisma, FAKE_VAPID, { id: salonId, name: 'Reminder Test Salon' }, serialNumber);
+    assert.deepEqual(result, { status: 'no_subscription' });
+  } finally {
+    await cleanup(salonId);
+  }
+});
+
+test('sendManualReminder is scoped by salon -- a card from another salon is not found', async () => {
+  const salonA = await setupSalonWithCard(0);
+  const salonB = await setupSalonWithCard(0);
+  try {
+    await saveSubscription(prisma, {
+      loyaltyCardId: salonA.cardId,
+      endpoint: `https://example.com/ep-${crypto.randomUUID()}`,
+      p256dhKey: 'p256dh',
+      authKey: 'auth',
+    });
+    // Card belongs to salon A, but we ask on behalf of salon B.
+    const result = await sendManualReminder(
+      prisma,
+      FAKE_VAPID,
+      { id: salonB.salonId, name: 'Salon B' },
+      salonA.serialNumber,
+    );
+    assert.deepEqual(result, { status: 'no_subscription' });
+  } finally {
+    await cleanup(salonA.salonId);
+    await cleanup(salonB.salonId);
+  }
 });

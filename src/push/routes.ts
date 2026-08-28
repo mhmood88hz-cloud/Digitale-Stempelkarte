@@ -1,11 +1,11 @@
 import type { FastifyInstance } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
-import { requireOwner } from '../auth/tenantGuard';
+import { requireAuth, requireOwner } from '../auth/tenantGuard';
 import { findCardForDisplay } from '../customer-pwa/cardRepository';
 import { getSalon } from '../admin/salonRepository';
 import { loadVapidConfig } from './vapidConfig';
 import { saveSubscription } from './subscriptionRepository';
-import { sendRemindersForSalon } from './reminders';
+import { sendManualReminder, sendRemindersForSalon } from './reminders';
 
 export interface PushRoutesOptions {
   prisma: PrismaClient;
@@ -76,4 +76,24 @@ export function registerPushRoutes(app: FastifyInstance, options: PushRoutesOpti
     });
     return reply.send(result);
   });
+
+  app.post<{ Params: { serialNumber: string } }>(
+    '/api/customers/:serialNumber/remind',
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      let vapid;
+      try {
+        vapid = loadVapidConfig();
+      } catch {
+        return reply.code(503).send({ error: 'push_not_configured' });
+      }
+
+      const salon = await getSalon(prisma, request.session!.salonId);
+      const result = await sendManualReminder(prisma, vapid, salon, request.params.serialNumber);
+
+      if (result.status === 'no_subscription') return reply.code(404).send({ error: 'no_subscription' });
+      if (result.status === 'send_failed') return reply.code(502).send({ error: 'send_failed' });
+      return reply.send({ ok: true });
+    },
+  );
 }

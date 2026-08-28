@@ -72,6 +72,47 @@ export async function sendPushNotification(
   }
 }
 
+export type ManualReminderResult = { status: 'sent' } | { status: 'no_subscription' } | { status: 'send_failed' };
+
+/**
+ * Sends a one-off reminder to a single card right now, bypassing the interval/last-reminded
+ * checks that the bulk job uses -- this is for a staff member explicitly choosing "remind this
+ * customer" from the customer list, not the automatic inactivity sweep. Scoped by salonId (not
+ * just serialNumber) for the same multi-tenant reason as everywhere else: staff can't message a
+ * card that belongs to a different salon.
+ */
+export async function sendManualReminder(
+  prisma: PrismaClient,
+  vapid: VapidConfig,
+  salon: { id: string; name: string },
+  serialNumber: string,
+): Promise<ManualReminderResult> {
+  const card = await prisma.loyaltyCard.findFirst({
+    where: { serialNumber, salonId: salon.id },
+    include: { pushSubscriptions: true },
+  });
+  if (!card || card.pushSubscriptions.length === 0) return { status: 'no_subscription' };
+
+  let anySucceeded = false;
+  for (const subscription of card.pushSubscriptions) {
+    const result = await sendPushNotification(
+      vapid,
+      { endpoint: subscription.endpoint, p256dhKey: subscription.p256dhKey, authKey: subscription.authKey },
+      {
+        title: salon.name,
+        body: 'Wir vermissen dich! Komm doch mal wieder vorbei und hol dir deinen Stempel.',
+        url: `/wallet/${card.serialNumber}`,
+      },
+    );
+    if (result.shouldDelete) await deleteSubscriptionByEndpoint(prisma, subscription.endpoint);
+    if (result.ok) anySucceeded = true;
+  }
+
+  if (!anySucceeded) return { status: 'send_failed' };
+  await prisma.loyaltyCard.update({ where: { id: card.id }, data: { lastReminderSentAt: new Date() } });
+  return { status: 'sent' };
+}
+
 export interface SalonForReminders {
   id: string;
   name: string;

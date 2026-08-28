@@ -131,3 +131,41 @@ test('POST /api/reminders/send returns sent:0 when the salon has no reminderInte
     await app.close();
   }
 });
+
+test('POST /api/customers/:serialNumber/remind requires authentication', async () => {
+  const app = buildApp({ prisma, sessionSecret: 'test-secret' });
+  const response = await app.inject({ method: 'POST', url: '/api/customers/LC-does-not-exist/remind' });
+  assert.equal(response.statusCode, 401);
+  await app.close();
+});
+
+test('POST /api/customers/:serialNumber/remind returns 404 for a card with no push subscription', async () => {
+  const app = buildApp({ prisma, sessionSecret: 'test-secret' });
+  const slug = uniqueSlug();
+  try {
+    const signup = await app.inject({
+      method: 'POST',
+      url: '/auth/signup',
+      payload: { salonName: 'Push Route Test Salon', slug, ownerEmail: 'owner@example.com', password: 'supersecret1' },
+    });
+    const cookie = String(signup.headers['set-cookie']);
+    const customer = await app.inject({
+      method: 'POST',
+      url: '/api/customers',
+      headers: { cookie },
+      payload: { name: 'Jane' },
+    });
+    const serialNumber = customer.json().loyaltyCard.serialNumber;
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/customers/${serialNumber}/remind`,
+      headers: { cookie },
+    });
+    assert.equal(response.statusCode, 404);
+    assert.equal(response.json().error, 'no_subscription');
+  } finally {
+    await cleanupSalon(slug);
+    await app.close();
+  }
+});
