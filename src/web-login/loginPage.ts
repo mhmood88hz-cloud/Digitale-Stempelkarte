@@ -1,3 +1,5 @@
+import { renderBaseStyles } from '../shared/styles';
+
 function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
@@ -13,15 +15,12 @@ export function renderLoginPage(slug: string): string {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Anmelden</title>
 <style>
-  body { font-family: system-ui, sans-serif; max-width: 360px; margin: 3rem auto; padding: 0 1rem; }
-  h1 { font-size: 1.3rem; }
-  label { display: block; margin-top: 0.75rem; font-size: 0.9rem; }
-  input { font-size: 1rem; padding: 0.5rem; width: 100%; box-sizing: border-box; margin-top: 0.25rem; }
-  button { font-size: 1rem; padding: 0.6rem 1rem; margin-top: 1.25rem; width: 100%; cursor: pointer; }
-  #error { margin-top: 1rem; padding: 0.6rem; border-radius: 6px; background: #fee2e2; color: #7f1d1d; display: none; }
+  ${renderBaseStyles()}
+  .card { max-width: 360px; }
 </style>
 </head>
 <body>
+  <div class="card">
   <h1>Anmelden</h1>
   <div id="error"></div>
   <form id="login-form">
@@ -29,6 +28,7 @@ export function renderLoginPage(slug: string): string {
     <label>Passwort<input id="password" type="password" required></label>
     <button type="submit">Anmelden</button>
   </form>
+  </div>
 <script>
 (function () {
   var errorBox = document.getElementById('error');

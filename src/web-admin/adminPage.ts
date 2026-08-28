@@ -1,4 +1,5 @@
 import { renderNav, renderNavStyles } from '../shared/nav';
+import { renderBaseStyles } from '../shared/styles';
 
 /** Admin dashboard: salon settings + staff management. Plain HTML/CSS/JS, no build step. */
 export function renderAdminPage(): string {
@@ -9,31 +10,24 @@ export function renderAdminPage(): string {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Salon-Verwaltung</title>
 <style>
-  body { font-family: system-ui, sans-serif; max-width: 560px; margin: 2rem auto; padding: 0 1rem; }
+  ${renderBaseStyles()}
   ${renderNavStyles()}
-  h1 { font-size: 1.3rem; }
-  h2 { font-size: 1.1rem; margin-top: 2rem; }
-  label { display: block; margin-top: 0.75rem; font-size: 0.9rem; }
-  input { font-size: 1rem; padding: 0.5rem; width: 100%; box-sizing: border-box; margin-top: 0.25rem; }
-  button { font-size: 1rem; padding: 0.6rem 1rem; margin-top: 1rem; cursor: pointer; }
-  table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-  th, td { text-align: left; padding: 0.4rem; border-bottom: 1px solid #e5e7eb; font-size: 0.9rem; }
-  #message { margin-top: 1rem; padding: 0.6rem; border-radius: 6px; display: none; }
-  #message.ok { background: #dcfce7; color: #14532d; display: block; }
-  #message.error { background: #fee2e2; color: #7f1d1d; display: block; }
+  .card { max-width: 560px; }
   #report { display: flex; gap: 1.5rem; margin-top: 0.5rem; }
   .stat { text-align: center; }
-  .stat .value { font-size: 1.6rem; font-weight: bold; display: block; }
-  .stat .label { font-size: 0.8rem; color: #555; }
+  .stat .value { font-size: 1.6rem; font-weight: bold; display: block; color: var(--color-primary); }
+  .stat .label { font-size: 0.8rem; color: var(--color-muted); }
+  .link-row { font-size: 0.85rem; color: var(--color-muted); margin-top: 0.5rem; word-break: break-all; }
 </style>
 </head>
 <body>
+  <div class="card">
   ${renderNav('admin')}
   <h1>Salon-Verwaltung</h1>
   <div id="message"></div>
 
-  <p>Login-Link für dein Personal: <a id="login-link" href="#"></a></p>
-  <p>Beitreten-Link für Kunden (z.B. als QR-Code im Laden aushängen): <a id="join-link" href="#" target="_blank"></a></p>
+  <p class="link-row">Login-Link für dein Personal: <a id="login-link" href="#"></a></p>
+  <p class="link-row">Beitreten-Link für Kunden (z.B. als QR-Code im Laden aushängen): <a id="join-link" href="#" target="_blank"></a></p>
 
   <h2>Diesen Monat</h2>
   <div id="report">Lädt...</div>
@@ -60,6 +54,7 @@ export function renderAdminPage(): string {
   <label>Neue E-Mail<input id="new-staff-email" type="email"></label>
   <label>Passwort<input id="new-staff-password" type="password"></label>
   <button id="add-staff" type="button">Personal hinzufügen</button>
+  </div>
 
 <script>
 (function () {

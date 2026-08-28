@@ -1,3 +1,5 @@
+import { renderBaseStyles } from '../shared/styles';
+
 function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
@@ -17,22 +19,22 @@ export function renderJoinPage(salonName: string, slug: string): string {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${safeName} -- Stempelkarte</title>
 <style>
-  body { font-family: system-ui, sans-serif; max-width: 360px; margin: 3rem auto; padding: 0 1rem; text-align: center; }
-  h1 { font-size: 1.3rem; }
-  input { font-size: 1.1rem; padding: 0.7rem; width: 100%; box-sizing: border-box; margin-top: 1rem; }
-  button { font-size: 1.1rem; padding: 0.8rem 1rem; margin-top: 1.25rem; width: 100%; cursor: pointer; }
-  #error { margin-top: 1rem; padding: 0.6rem; border-radius: 6px; background: #fee2e2; color: #7f1d1d; display: none; }
+  ${renderBaseStyles()}
+  .card { max-width: 360px; text-align: center; }
+  input { margin-top: 1rem; }
 </style>
 </head>
 <body>
+  <div class="card">
   <h1>${safeName}</h1>
-  <p>Trag deinen Namen ein und bekomm deine digitale Stempelkarte.</p>
+  <p class="hint">Trag deinen Namen ein und bekomm deine digitale Stempelkarte.</p>
   <div id="error"></div>
   <form id="join-form">
     <input id="customer-name" type="text" placeholder="Dein Name" required autofocus>
     <input id="customer-phone" type="tel" placeholder="Telefonnummer (optional)">
     <button type="submit">Stempelkarte holen</button>
   </form>
+  </div>
 <script>
 (function () {
   var errorBox = document.getElementById('error');

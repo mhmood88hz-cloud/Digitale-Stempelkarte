@@ -1,3 +1,5 @@
+import { renderBaseStyles } from '../shared/styles';
+
 /** Public self-service salon registration form. Plain HTML/JS, no build step. POSTs to the
  * existing /auth/signup API with credentials:'include' so the browser stores the session
  * cookie normally, then redirects straight into the new salon's admin dashboard. */
@@ -9,16 +11,12 @@ export function renderSignupPage(): string {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Salon registrieren</title>
 <style>
-  body { font-family: system-ui, sans-serif; max-width: 400px; margin: 3rem auto; padding: 0 1rem; }
-  h1 { font-size: 1.3rem; }
-  p.hint { font-size: 0.85rem; color: #555; margin-top: -0.5rem; }
-  label { display: block; margin-top: 0.75rem; font-size: 0.9rem; }
-  input { font-size: 1rem; padding: 0.5rem; width: 100%; box-sizing: border-box; margin-top: 0.25rem; }
-  button { font-size: 1rem; padding: 0.6rem 1rem; margin-top: 1.25rem; width: 100%; cursor: pointer; }
-  #error { margin-top: 1rem; padding: 0.6rem; border-radius: 6px; background: #fee2e2; color: #7f1d1d; display: none; }
+  ${renderBaseStyles()}
+  .card { max-width: 400px; }
 </style>
 </head>
 <body>
+  <div class="card">
   <h1>Salon registrieren</h1>
   <p class="hint">Kostenlose Testphase, keine Zahlungsdaten nötig.</p>
   <div id="error"></div>
@@ -30,6 +28,7 @@ export function renderSignupPage(): string {
     <label>Passwort (min. 8 Zeichen)<input id="password" type="password" minlength="8" required></label>
     <button type="submit">Registrieren</button>
   </form>
+  </div>
 <script>
 (function () {
   var errorBox = document.getElementById('error');

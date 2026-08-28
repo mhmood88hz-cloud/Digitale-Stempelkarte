@@ -7,11 +7,13 @@ export type NavActivePage = 'admin' | 'scan';
 
 export function renderNavStyles(): string {
   return `
-  nav#top-nav { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1.5rem; padding-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb; overflow-x: auto; }
-  nav#top-nav a { flex: 0 0 auto; padding: 0.5rem 0.9rem; border-radius: 6px; text-decoration: none; color: #111; font-size: 0.95rem; white-space: nowrap; }
-  nav#top-nav a.active { background: #111; color: #fff; }
-  nav#top-nav a:not(.active) { background: #f3f4f6; }
-  nav#top-nav button#nav-logout { flex: 0 0 auto; margin-left: auto; padding: 0.5rem 0.9rem; font-size: 0.9rem; }`;
+  nav#top-nav { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1.5rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--color-border); overflow-x: auto; }
+  nav#top-nav a { flex: 0 0 auto; padding: 0.5rem 0.9rem; border-radius: 999px; text-decoration: none; font-size: 0.9rem; font-weight: 600; white-space: nowrap; transition: background 0.15s, color 0.15s; }
+  nav#top-nav a.active { background: var(--color-primary); color: #fff; }
+  nav#top-nav a:not(.active) { background: var(--color-bg); color: var(--color-muted); }
+  nav#top-nav a:not(.active):hover { background: var(--color-border); }
+  nav#top-nav button#nav-logout { flex: 0 0 auto; margin-top: 0; margin-left: auto; width: auto; padding: 0.5rem 0.9rem; font-size: 0.85rem; border-radius: 999px; background: var(--color-bg); color: var(--color-muted); }
+  nav#top-nav button#nav-logout:hover { background: var(--color-border); }`;
 }
 
 export function renderNav(active: NavActivePage): string {

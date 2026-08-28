@@ -10,6 +10,7 @@
  * permission denied) instead of just doing nothing.
  */
 import { renderNav, renderNavStyles } from '../shared/nav';
+import { renderBaseStyles } from '../shared/styles';
 
 export function renderScanPage(): string {
   return `<!doctype html>
@@ -19,34 +20,31 @@ export function renderScanPage(): string {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Stempel vergeben</title>
 <style>
-  body { font-family: system-ui, sans-serif; max-width: 480px; margin: 2rem auto; padding: 0 1rem; }
-  h1 { font-size: 1.25rem; }
-  input, button { font-size: 1.1rem; padding: 0.6rem; width: 100%; box-sizing: border-box; margin-top: 0.5rem; }
-  button { cursor: pointer; }
-  #video { width: 100%; display: none; margin-top: 0.5rem; border-radius: 8px; }
-  #result, #new-customer-result { margin-top: 1rem; padding: 0.75rem; border-radius: 8px; display: none; }
-  #result.ok, #new-customer-result.ok { background: #dcfce7; color: #14532d; display: block; }
-  #result.error, #new-customer-result.error { background: #fee2e2; color: #7f1d1d; display: block; }
-  #new-customer-result a { display: inline-block; margin-top: 0.4rem; }
-  h1 { margin-top: 2rem; }
-  h1:first-child { margin-top: 0; }
+  ${renderBaseStyles()}
   ${renderNavStyles()}
+  .card { max-width: 480px; }
+  h1 { margin-top: 0; }
+  #video { width: 100%; display: none; margin-top: 0.75rem; border-radius: var(--radius-sm); }
+  #new-customer-result a { display: inline-block; margin-top: 0.4rem; }
+  button.secondary { margin-top: 0.5rem; }
 </style>
 </head>
 <body>
+  <div class="card">
   ${renderNav('scan')}
   <h1>Neuer Kunde</h1>
   <input id="new-customer-name" type="text" placeholder="Name" autocomplete="off">
   <button id="new-customer-button" type="button">Kunde anlegen</button>
   <div id="new-customer-result"></div>
 
-  <h1>Stempel vergeben</h1>
+  <h2>Stempel vergeben</h2>
   <input id="serial-input" type="text" placeholder="Seriennummer (z.B. LC-...)" autocomplete="off">
   <button id="stamp-button" type="button">Stempel geben</button>
-  <button id="redeem-button" type="button">Rabatt einlösen</button>
-  <button id="camera-button" type="button">Kamera starten</button>
+  <button id="redeem-button" type="button" class="secondary">Rabatt einlösen</button>
+  <button id="camera-button" type="button" class="secondary">Kamera starten</button>
   <video id="video" autoplay muted playsinline></video>
   <div id="result"></div>
+  </div>
 
 <script src="/staff/jsqr.js"></script>
 <script>

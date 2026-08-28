@@ -9,6 +9,8 @@ export interface WalletPageData {
   showGoogleWalletLink: boolean;
 }
 
+import { renderBaseStyles } from '../shared/styles';
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
@@ -38,31 +40,33 @@ export function renderWalletPage(data: WalletPageData): string {
 <link rel="manifest" href="/wallet/${encodeURIComponent(data.serialNumber)}/manifest.webmanifest">
 <title>${salonName} -- Stempelkarte</title>
 <style>
-  body { font-family: system-ui, sans-serif; max-width: 420px; margin: 2rem auto; padding: 0 1rem; text-align: center; }
-  h1 { font-size: 1.4rem; }
-  .progress { background: #e5e7eb; border-radius: 999px; height: 1.5rem; margin: 1.5rem 0; overflow: hidden; }
-  .progress-bar { background: ${escapeHtml(data.brandColor)}; height: 100%; }
+  ${renderBaseStyles()}
+  .card { max-width: 420px; text-align: center; }
+  .progress { background: var(--color-border); border-radius: 999px; height: 1.25rem; margin: 1.5rem 0; overflow: hidden; }
+  .progress-bar { background: ${escapeHtml(data.brandColor)}; height: 100%; transition: width 0.3s; }
   .count { font-size: 2rem; font-weight: bold; }
-  .reward { margin-top: 1rem; padding: 0.75rem; border-radius: 8px; background: #dcfce7; color: #14532d; }
-  .google-wallet-link { display: inline-block; margin-top: 1rem; }
+  .reward { margin-top: 1rem; padding: 0.75rem; border-radius: var(--radius-sm); background: var(--color-success-bg); color: var(--color-success-text); }
+  .google-wallet-link { display: inline-block; margin-top: 1.25rem; }
   .google-wallet-link img { height: 48px; }
-  #enable-reminders { margin-top: 1rem; padding: 0.6rem 1rem; font-size: 0.95rem; cursor: pointer; }
-  #reminder-status { margin-top: 0.5rem; font-size: 0.85rem; color: #555; }
+  #enable-reminders.secondary { margin-top: 1rem; }
+  #reminder-status { margin-top: 0.5rem; font-size: 0.85rem; color: var(--color-muted); }
 </style>
 </head>
 <body>
+  <div class="card">
   <h1>${salonName}</h1>
   <div class="count">${data.stampCount} / ${data.stampsRequired} Stempel</div>
   <div class="progress"><div class="progress-bar" style="width: ${progressPercent}%"></div></div>
   ${data.rewardReady ? `<div class="reward">Dein Rabatt ist bereit: ${rewardDescription}</div>` : ''}
-  <p>Zeig diese Seite beim nächsten Besuch dem Personal, oder füge sie über "Zum Home-Bildschirm hinzufügen" deinem Startbildschirm hinzu.</p>
+  <p class="hint">Zeig diese Seite beim nächsten Besuch dem Personal, oder füge sie über "Zum Home-Bildschirm hinzufügen" deinem Startbildschirm hinzu.</p>
   ${
     data.showGoogleWalletLink
       ? `<a class="google-wallet-link" href="/wallet/${encodeURIComponent(data.serialNumber)}/google-save-link">Zu Google Wallet hinzufügen</a>`
       : ''
   }
-  <button id="enable-reminders" type="button">Erinnerungen aktivieren</button>
+  <button id="enable-reminders" class="secondary" type="button">Erinnerungen aktivieren</button>
   <div id="reminder-status"></div>
+  </div>
 <script>
 (function () {
   var serialNumber = ${JSON.stringify(data.serialNumber)};
