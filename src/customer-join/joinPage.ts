@@ -36,6 +36,57 @@ export function renderJoinPage(salonName: string, slug: string): string {
 <script>
 (function () {
   var errorBox = document.getElementById('error');
+
+  function urlBase64ToUint8Array(base64String) {
+    var padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    var rawData = atob(base64);
+    var outputArray = new Uint8Array(rawData.length);
+    for (var i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+    return outputArray;
+  }
+
+  // Asking for push permission on this page (instead of leaving it for the wallet page) matters
+  // because customers going straight to Google Wallet never see the wallet page at all -- if we
+  // didn't ask here, that whole group would silently never get reminders. Best-effort: any
+  // failure (unsupported browser, permission denied, network) just falls through to the redirect.
+  function enablePushThenRedirect(serialNumber, redirectUrl) {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      window.location.href = redirectUrl;
+      return;
+    }
+    var statusBox = document.getElementById('error');
+    statusBox.style.display = 'none';
+    var goToWallet = function () { window.location.href = redirectUrl; };
+    Notification.requestPermission().then(function (permission) {
+      if (permission !== 'granted') {
+        goToWallet();
+        return;
+      }
+      Promise.all([
+        navigator.serviceWorker.register('/wallet/sw.js').catch(function () { return null; }),
+        fetch('/push/vapid-public-key').then(function (r) { return r.json(); }),
+      ]).then(function (results) {
+        var registration = results[0];
+        var vapid = results[1];
+        if (!registration || !vapid.publicKey) {
+          goToWallet();
+          return;
+        }
+        registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapid.publicKey),
+        }).then(function (subscription) {
+          return fetch('/wallet/' + encodeURIComponent(serialNumber) + '/push-subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(subscription.toJSON()),
+          });
+        }).then(goToWallet).catch(goToWallet);
+      }).catch(goToWallet);
+    }).catch(goToWallet);
+  }
+
   document.getElementById('join-form').addEventListener('submit', function (event) {
     event.preventDefault();
     errorBox.style.display = 'none';
@@ -50,7 +101,8 @@ export function renderJoinPage(salonName: string, slug: string): string {
       return response.json().then(function (body) { return { status: response.status, body: body }; });
     }).then(function (res) {
       if (res.status === 201) {
-        window.location.href = res.body.redirectUrl || ('/wallet/' + encodeURIComponent(res.body.serialNumber));
+        var redirectUrl = res.body.redirectUrl || ('/wallet/' + encodeURIComponent(res.body.serialNumber));
+        enablePushThenRedirect(res.body.serialNumber, redirectUrl);
       } else {
         errorBox.textContent = 'Bitte einen Namen eingeben.';
         errorBox.style.display = 'block';
