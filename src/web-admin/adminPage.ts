@@ -1,3 +1,5 @@
+import { renderNav, renderNavStyles } from '../shared/nav';
+
 /** Admin dashboard: salon settings + staff management. Plain HTML/CSS/JS, no build step. */
 export function renderAdminPage(): string {
   return `<!doctype html>
@@ -8,6 +10,7 @@ export function renderAdminPage(): string {
 <title>Salon-Verwaltung</title>
 <style>
   body { font-family: system-ui, sans-serif; max-width: 560px; margin: 2rem auto; padding: 0 1rem; }
+  ${renderNavStyles()}
   h1 { font-size: 1.3rem; }
   h2 { font-size: 1.1rem; margin-top: 2rem; }
   label { display: block; margin-top: 0.75rem; font-size: 0.9rem; }
@@ -25,6 +28,7 @@ export function renderAdminPage(): string {
 </style>
 </head>
 <body>
+  ${renderNav('admin')}
   <h1>Salon-Verwaltung</h1>
   <div id="message"></div>
 

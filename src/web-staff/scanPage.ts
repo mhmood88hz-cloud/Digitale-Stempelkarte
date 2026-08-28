@@ -9,6 +9,8 @@
  * automatically, and always shows a concrete reason when it can't start (no secure context,
  * permission denied) instead of just doing nothing.
  */
+import { renderNav, renderNavStyles } from '../shared/nav';
+
 export function renderScanPage(): string {
   return `<!doctype html>
 <html lang="de">
@@ -28,9 +30,11 @@ export function renderScanPage(): string {
   #new-customer-result a { display: inline-block; margin-top: 0.4rem; }
   h1 { margin-top: 2rem; }
   h1:first-child { margin-top: 0; }
+  ${renderNavStyles()}
 </style>
 </head>
 <body>
+  ${renderNav('scan')}
   <h1>Neuer Kunde</h1>
   <input id="new-customer-name" type="text" placeholder="Name" autocomplete="off">
   <button id="new-customer-button" type="button">Kunde anlegen</button>
