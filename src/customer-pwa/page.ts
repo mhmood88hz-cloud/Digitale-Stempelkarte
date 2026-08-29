@@ -6,6 +6,7 @@ export interface WalletPageData {
   rewardReady: boolean;
   rewardDescription: string;
   serialNumber: string;
+  customerNumber: number;
   showGoogleWalletLink: boolean;
 }
 
@@ -58,6 +59,7 @@ export function renderWalletPage(data: WalletPageData): string {
   <div class="count">${data.stampCount} / ${data.stampsRequired} Stempel</div>
   <div class="progress"><div class="progress-bar" style="width: ${progressPercent}%"></div></div>
   ${data.rewardReady ? `<div class="reward">Dein Rabatt ist bereit: ${rewardDescription}</div>` : ''}
+  <p class="hint">Deine Kundennummer: <strong>#${data.customerNumber}</strong> -- damit findet dich das Personal auch ohne diese Seite wieder.</p>
   <p class="hint">Zeig diese Seite beim nächsten Besuch dem Personal, oder füge sie über "Zum Home-Bildschirm hinzufügen" deinem Startbildschirm hinzu.</p>
   ${
     data.showGoogleWalletLink

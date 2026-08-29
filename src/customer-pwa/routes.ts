@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
+import QRCode from 'qrcode';
 import { findCardForDisplay } from './cardRepository';
 import { renderWalletPage } from './page';
 import { buildManifest } from './manifest';
@@ -39,7 +40,7 @@ export function registerCustomerPwaRoutes(app: FastifyInstance, options: Custome
     const found = await findCardForDisplay(prisma, request.params.serialNumber);
     if (!found) return reply.code(404).send({ error: 'card_not_found' });
 
-    const { card, salon } = found;
+    const { card, salon, customer } = found;
     reply.type('text/html').send(
       renderWalletPage({
         salonName: salon.name,
@@ -49,6 +50,7 @@ export function registerCustomerPwaRoutes(app: FastifyInstance, options: Custome
         rewardReady: card.stampCount >= salon.stampsRequired,
         rewardDescription: salon.rewardDescription,
         serialNumber: card.serialNumber,
+        customerNumber: customer.customerNumber,
         showGoogleWalletLink: !isAppleMobileDevice(request.headers['user-agent']),
       }),
     );
@@ -74,6 +76,20 @@ export function registerCustomerPwaRoutes(app: FastifyInstance, options: Custome
 
   app.get('/wallet/sw.js', async (_request, reply) => {
     reply.type('application/javascript').send(SERVICE_WORKER_SOURCE);
+  });
+
+  // Lets staff pull up a printable/on-screen QR for a customer found via search (no serial
+  // number typed or scanned) so they can save their own card if they want to -- same access
+  // level as the wallet page itself (the serial number is already a public bearer token, see
+  // src/loyalty/serial.ts), just rendered as a scannable code instead of a link.
+  app.get<{ Params: { serialNumber: string } }>('/wallet/:serialNumber/qr.svg', async (request, reply) => {
+    const found = await findCardForDisplay(prisma, request.params.serialNumber);
+    if (!found) return reply.code(404).send({ error: 'card_not_found' });
+
+    const host = request.headers.host ?? 'localhost';
+    const walletUrl = `${request.protocol}://${host}/wallet/${encodeURIComponent(found.card.serialNumber)}`;
+    const svg = await QRCode.toString(walletUrl, { type: 'svg', margin: 1 });
+    reply.type('image/svg+xml').send(svg);
   });
 
   app.get<{ Params: { serialNumber: string } }>('/wallet/:serialNumber/google-save-link', async (request, reply) => {

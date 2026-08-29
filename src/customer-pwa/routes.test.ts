@@ -127,6 +127,41 @@ test('GET /wallet/:serialNumber/google-save-link returns 404 for an unknown seri
   await app.close();
 });
 
+test('GET /wallet/:serialNumber shows the customer\'s short customer number', async () => {
+  const app = buildApp({ prisma, sessionSecret: 'test-secret' });
+  const slug = `test-pwa-${Date.now()}`;
+  try {
+    const { serialNumber } = await setupSalonWithCard(app, slug);
+    const response = await app.inject({ method: 'GET', url: `/wallet/${serialNumber}` });
+    assert.match(response.body, /Kundennummer.*#1/s);
+  } finally {
+    await cleanupSalon(slug);
+    await app.close();
+  }
+});
+
+test('GET /wallet/:serialNumber/qr.svg returns a scannable SVG QR code encoding the wallet URL', async () => {
+  const app = buildApp({ prisma, sessionSecret: 'test-secret' });
+  const slug = `test-pwa-${Date.now()}`;
+  try {
+    const { serialNumber } = await setupSalonWithCard(app, slug);
+    const response = await app.inject({ method: 'GET', url: `/wallet/${serialNumber}/qr.svg` });
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.headers['content-type'], 'image/svg+xml');
+    assert.match(response.body, /<svg/);
+  } finally {
+    await cleanupSalon(slug);
+    await app.close();
+  }
+});
+
+test('GET /wallet/:serialNumber/qr.svg returns 404 for an unknown serial', async () => {
+  const app = buildApp({ prisma, sessionSecret: 'test-secret' });
+  const response = await app.inject({ method: 'GET', url: '/wallet/LC-does-not-exist/qr.svg' });
+  assert.equal(response.statusCode, 404);
+  await app.close();
+});
+
 test('GET /wallet/sw.js serves the service worker script', async () => {
   const app = buildApp({ prisma, sessionSecret: 'test-secret' });
   const response = await app.inject({ method: 'GET', url: '/wallet/sw.js' });

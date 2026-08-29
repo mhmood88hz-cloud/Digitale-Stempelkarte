@@ -27,12 +27,27 @@ export function renderScanPage(): string {
   #video { width: 100%; display: none; margin-top: 0.75rem; border-radius: var(--radius-sm); }
   #new-customer-result a { display: inline-block; margin-top: 0.4rem; }
   button.secondary { margin-top: 0.5rem; }
+  .customer-hit-wrapper { border-bottom: 1px solid var(--color-border); }
+  .customer-hit-wrapper:last-child { border-bottom: none; }
+  .customer-hit { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.6rem 0; text-align: left; }
+  .customer-hit .info { font-size: 0.9rem; }
+  .customer-hit .info .name { font-weight: 600; }
+  .customer-hit .info .meta { color: var(--color-muted); font-size: 0.8rem; }
+  .customer-hit .actions { display: flex; gap: 0.4rem; flex: 0 0 auto; }
+  .customer-hit .actions button { width: auto; margin-top: 0; padding: 0.4rem 0.7rem; font-size: 0.85rem; }
+  #search-results { margin-top: 0.5rem; }
+  .qr-preview { margin-top: 0.5rem; text-align: center; }
+  .qr-preview img { width: 160px; height: 160px; }
 </style>
 </head>
 <body>
   <div class="card">
   ${renderNav('scan')}
-  <h1>Neuer Kunde</h1>
+  <h1>Kunde suchen</h1>
+  <input id="search-input" type="text" placeholder="Name, Telefonnummer oder Kundennummer" autocomplete="off">
+  <div id="search-results"></div>
+
+  <h2>Neuer Kunde</h2>
   <input id="new-customer-name" type="text" placeholder="Name" autocomplete="off">
   <button id="new-customer-button" type="button">Kunde anlegen</button>
   <div id="new-customer-result"></div>
@@ -85,9 +100,9 @@ export function renderScanPage(): string {
       serialNumber = currentSerialNumber();
     } catch (err) {
       showResult(err.message, false);
-      return;
+      return Promise.resolve();
     }
-    callApi(path, serialNumber).then(function (res) {
+    return callApi(path, serialNumber).then(function (res) {
       if (res.status === 200) {
         showResult(successMessageFn(res.body), true);
       } else if (res.status === 401) {
@@ -143,11 +158,101 @@ export function renderScanPage(): string {
     });
   });
 
+  function giveStamp(serialNumber, onDone) {
+    serialInput.value = serialNumber;
+    handle('/api/stamps', function (body) {
+      return 'Stempel ' + body.stampCount + ' von ' + body.stampsRequired +
+        (body.rewardReady ? ' -- Rabatt bereit!' : '.');
+    }).then(function () {
+      if (onDone) onDone();
+    });
+  }
+
   stampButton.addEventListener('click', function () {
     handle('/api/stamps', function (body) {
       return 'Stempel ' + body.stampCount + ' von ' + body.stampsRequired +
         (body.rewardReady ? ' -- Rabatt bereit!' : '.');
     });
+  });
+
+  var searchInput = document.getElementById('search-input');
+  var searchResults = document.getElementById('search-results');
+  var searchTimer = null;
+
+  function runSearch() {
+    var query = searchInput.value.trim();
+    if (query.length < 2) {
+      searchResults.innerHTML = '';
+      return;
+    }
+    fetch('/api/customers/search?q=' + encodeURIComponent(query), { credentials: 'include' })
+      .then(function (response) { return response.json(); })
+      .then(function (hits) {
+        searchResults.innerHTML = '';
+        if (hits.length === 0) {
+          var empty = document.createElement('p');
+          empty.className = 'hint';
+          empty.textContent = 'Keine Treffer.';
+          searchResults.appendChild(empty);
+          return;
+        }
+        hits.forEach(function (hit) {
+          var wrapper = document.createElement('div');
+          wrapper.className = 'customer-hit-wrapper';
+
+          var row = document.createElement('div');
+          row.className = 'customer-hit';
+
+          var info = document.createElement('div');
+          info.className = 'info';
+          var nameLine = document.createElement('div');
+          nameLine.className = 'name';
+          nameLine.textContent = hit.name + ' (#' + hit.customerNumber + ')';
+          var metaLine = document.createElement('div');
+          metaLine.className = 'meta';
+          metaLine.textContent = (hit.phone || 'keine Telefonnummer') + ' -- ' + hit.stampCount + ' Stempel';
+          info.appendChild(nameLine);
+          info.appendChild(metaLine);
+
+          var actions = document.createElement('div');
+          actions.className = 'actions';
+
+          var stampHitButton = document.createElement('button');
+          stampHitButton.type = 'button';
+          stampHitButton.textContent = 'Stempel geben';
+          stampHitButton.addEventListener('click', function () {
+            giveStamp(hit.serialNumber, runSearch);
+          });
+
+          var qrButton = document.createElement('button');
+          qrButton.type = 'button';
+          qrButton.className = 'secondary';
+          qrButton.textContent = 'QR zeigen';
+          qrButton.addEventListener('click', function () {
+            var existing = wrapper.querySelector('.qr-preview');
+            if (existing) { existing.remove(); return; }
+            var preview = document.createElement('div');
+            preview.className = 'qr-preview';
+            var img = document.createElement('img');
+            img.src = '/wallet/' + encodeURIComponent(hit.serialNumber) + '/qr.svg';
+            img.alt = 'QR-Code fuer ' + hit.name;
+            preview.appendChild(img);
+            wrapper.appendChild(preview);
+          });
+
+          actions.appendChild(stampHitButton);
+          actions.appendChild(qrButton);
+          row.appendChild(info);
+          row.appendChild(actions);
+          wrapper.appendChild(row);
+          searchResults.appendChild(wrapper);
+        });
+      });
+  }
+
+  searchInput.addEventListener('input', function () {
+    if (searchTimer) clearTimeout(searchTimer);
+    searchTimer = setTimeout(runSearch, 300);
   });
 
   redeemButton.addEventListener('click', function () {

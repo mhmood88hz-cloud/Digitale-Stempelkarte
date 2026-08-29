@@ -18,7 +18,7 @@ async function setupSalonWithCard(daysAgoCreated: number): Promise<{ salonId: st
   const salon = await prisma.salon.create({
     data: { name: 'Reminder Test Salon', slug, trialEndsAt: new Date(), reminderIntervalDays: 7 },
   });
-  const customer = await prisma.customer.create({ data: { salonId: salon.id, name: 'Jane' } });
+  const customer = await prisma.customer.create({ data: { salonId: salon.id, name: 'Jane', customerNumber: 1 } });
   const card = await prisma.loyaltyCard.create({
     data: {
       salonId: salon.id,

@@ -10,6 +10,7 @@ const BASE = {
   rewardReady: false,
   rewardDescription: '10 EUR Rabatt',
   serialNumber: 'LC-abc123',
+  customerNumber: 7,
   showGoogleWalletLink: true,
 };
 

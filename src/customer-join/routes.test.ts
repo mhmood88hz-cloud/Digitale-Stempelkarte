@@ -135,3 +135,113 @@ test('POST /salons/:slug/join returns 404 for an unknown salon', async () => {
   assert.equal(response.statusCode, 404);
   await app.close();
 });
+
+test('POST /salons/:slug/lookup finds a returning customer by their customer number', async () => {
+  const app = buildApp({ prisma, sessionSecret: 'test-secret' });
+  const slug = uniqueSlug();
+  try {
+    await setupSalon(app, slug);
+    const joined = await app.inject({
+      method: 'POST',
+      url: `/salons/${slug}/join`,
+      payload: { name: 'Returning Customer' },
+    });
+    const serialNumber = joined.json().serialNumber;
+
+    const lookup = await app.inject({
+      method: 'POST',
+      url: `/salons/${slug}/lookup`,
+      payload: { customerNumber: 1 },
+    });
+    assert.equal(lookup.statusCode, 200);
+    assert.equal(lookup.json().serialNumber, serialNumber);
+    assert.equal(lookup.json().redirectUrl, `/wallet/${serialNumber}`);
+  } finally {
+    await cleanupSalon(slug);
+    await app.close();
+  }
+});
+
+test('POST /salons/:slug/lookup finds a returning customer by exact name + phone', async () => {
+  const app = buildApp({ prisma, sessionSecret: 'test-secret' });
+  const slug = uniqueSlug();
+  try {
+    await setupSalon(app, slug);
+    await app.inject({
+      method: 'POST',
+      url: `/salons/${slug}/join`,
+      payload: { name: 'Phone Lookup Kunde', phone: '0170 9998877' },
+    });
+
+    const lookup = await app.inject({
+      method: 'POST',
+      url: `/salons/${slug}/lookup`,
+      payload: { name: 'phone lookup kunde', phone: '0170 9998877' },
+    });
+    assert.equal(lookup.statusCode, 200);
+  } finally {
+    await cleanupSalon(slug);
+    await app.close();
+  }
+});
+
+test('POST /salons/:slug/lookup never resolves on name alone (avoids enumerating customers)', async () => {
+  const app = buildApp({ prisma, sessionSecret: 'test-secret' });
+  const slug = uniqueSlug();
+  try {
+    await setupSalon(app, slug);
+    await app.inject({
+      method: 'POST',
+      url: `/salons/${slug}/join`,
+      payload: { name: 'Name Only Kunde', phone: '0170 1112233' },
+    });
+
+    const lookup = await app.inject({
+      method: 'POST',
+      url: `/salons/${slug}/lookup`,
+      payload: { name: 'Name Only Kunde' },
+    });
+    assert.equal(lookup.statusCode, 404);
+  } finally {
+    await cleanupSalon(slug);
+    await app.close();
+  }
+});
+
+test('POST /salons/:slug/lookup returns 404 for a non-existent customer number', async () => {
+  const app = buildApp({ prisma, sessionSecret: 'test-secret' });
+  const slug = uniqueSlug();
+  try {
+    await setupSalon(app, slug);
+    const response = await app.inject({
+      method: 'POST',
+      url: `/salons/${slug}/lookup`,
+      payload: { customerNumber: 999 },
+    });
+    assert.equal(response.statusCode, 404);
+  } finally {
+    await cleanupSalon(slug);
+    await app.close();
+  }
+});
+
+test('POST /salons/:slug/lookup is rate-limited per salon+IP', async () => {
+  const app = buildApp({ prisma, sessionSecret: 'test-secret' });
+  const slug = uniqueSlug();
+  try {
+    await setupSalon(app, slug);
+    let lastStatus = 200;
+    for (let i = 0; i < 25; i++) {
+      const response = await app.inject({
+        method: 'POST',
+        url: `/salons/${slug}/lookup`,
+        payload: { customerNumber: 999 },
+      });
+      lastStatus = response.statusCode;
+    }
+    assert.equal(lastStatus, 429);
+  } finally {
+    await cleanupSalon(slug);
+    await app.close();
+  }
+});

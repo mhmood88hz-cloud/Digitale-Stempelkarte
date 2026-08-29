@@ -1,4 +1,4 @@
-import type { LoyaltyCard, PrismaClient, Salon } from '@prisma/client';
+import type { Customer, LoyaltyCard, PrismaClient, Salon } from '@prisma/client';
 
 /**
  * Public, customer-facing lookup: NOT scoped by a staff session, because there isn't one --
@@ -8,9 +8,12 @@ import type { LoyaltyCard, PrismaClient, Salon } from '@prisma/client';
 export async function findCardForDisplay(
   prisma: PrismaClient,
   serialNumber: string,
-): Promise<{ card: LoyaltyCard; salon: Salon } | null> {
+): Promise<{ card: LoyaltyCard; salon: Salon; customer: Customer } | null> {
   const card = await prisma.loyaltyCard.findUnique({ where: { serialNumber } });
   if (!card) return null;
-  const salon = await prisma.salon.findUniqueOrThrow({ where: { id: card.salonId } });
-  return { card, salon };
+  const [salon, customer] = await Promise.all([
+    prisma.salon.findUniqueOrThrow({ where: { id: card.salonId } }),
+    prisma.customer.findUniqueOrThrow({ where: { id: card.customerId } }),
+  ]);
+  return { card, salon, customer };
 }

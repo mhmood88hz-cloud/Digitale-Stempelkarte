@@ -65,11 +65,16 @@ model Customer {
   name      String
   email     String?
   phone     String?
+  // Short, per-salon-scoped number (1, 2, 3, ...) the customer can actually remember and say out
+  // loud -- unlike the long random LoyaltyCard.serialNumber, which only exists to be scanned.
+  // Doubles as a disambiguator when staff search by name and get multiple hits.
+  customerNumber Int
   createdAt DateTime @default(now())
 
   salon        Salon         @relation(fields: [salonId], references: [id])
   loyaltyCards LoyaltyCard[]
 
+  @@unique([salonId, customerNumber])
   @@map("customers")
 }
 

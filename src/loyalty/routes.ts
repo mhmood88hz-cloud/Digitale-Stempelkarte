@@ -1,7 +1,7 @@
 import type { FastifyBaseLogger, FastifyInstance } from 'fastify';
 import type { LoyaltyCard, PrismaClient } from '@prisma/client';
 import { requireAuth } from '../auth/tenantGuard';
-import { createCustomerWithCard, listCustomersForSalon } from './customerRepository';
+import { createCustomerWithCard, listCustomersForSalon, searchCustomersForSalon } from './customerRepository';
 import { addStamp, findCardBySerialInSalon, redeemReward, RewardNotReadyError } from './stampRepository';
 import { loadGoogleWalletCredentials } from '../googlewallet/credentials';
 import { pushLoyaltyObjectUpdate } from '../googlewallet/updateObject';
@@ -80,6 +80,10 @@ export function registerLoyaltyRoutes(app: FastifyInstance, options: LoyaltyRout
 
   app.get('/api/customers', { preHandler: requireAuth }, async (request) => {
     return listCustomersForSalon(prisma, request.session!.salonId);
+  });
+
+  app.get<{ Querystring: { q?: string } }>('/api/customers/search', { preHandler: requireAuth }, async (request) => {
+    return searchCustomersForSalon(prisma, request.session!.salonId, request.query.q ?? '');
   });
 
   app.post<{ Body: SerialBody }>(
