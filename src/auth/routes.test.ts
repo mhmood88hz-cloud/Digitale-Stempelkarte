@@ -138,3 +138,56 @@ test('logout clears the session cookie', async () => {
   assert.match(String(response.headers['set-cookie']), /Max-Age=0/);
   await app.close();
 });
+
+test('login is refused for a salon the platform owner has paused', async () => {
+  const app = buildApp({ prisma, sessionSecret: 'test-secret' });
+  const slug = uniqueSlug();
+  try {
+    await app.inject({
+      method: 'POST',
+      url: '/auth/signup',
+      payload: { salonName: 'Test Salon', slug, ownerEmail: 'owner@example.com', password: 'supersecret1' },
+    });
+    await prisma.salon.update({ where: { slug }, data: { isActive: false } });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/salons/${slug}/auth/login`,
+      payload: { email: 'owner@example.com', password: 'supersecret1' },
+    });
+    assert.equal(response.statusCode, 403);
+    assert.equal(response.json().error, 'salon_paused');
+  } finally {
+    await cleanupSalon(slug);
+    await app.close();
+  }
+});
+
+test('pausing a salon blocks an already-logged-in session on its very next request', async () => {
+  const app = buildApp({ prisma, sessionSecret: 'test-secret' });
+  const slug = uniqueSlug();
+  try {
+    const signup = await app.inject({
+      method: 'POST',
+      url: '/auth/signup',
+      payload: { salonName: 'Test Salon', slug, ownerEmail: 'owner@example.com', password: 'supersecret1' },
+    });
+    const cookie = String(signup.headers['set-cookie']);
+
+    const before = await app.inject({ method: 'GET', url: '/auth/me', headers: { cookie } });
+    assert.equal(before.statusCode, 200);
+
+    await prisma.salon.update({ where: { slug }, data: { isActive: false } });
+
+    const after = await app.inject({ method: 'GET', url: '/auth/me', headers: { cookie } });
+    assert.equal(after.statusCode, 403);
+    assert.equal(after.json().error, 'salon_paused');
+
+    // Logout must still work so staff can clear their own cookie once paused.
+    const logout = await app.inject({ method: 'POST', url: '/auth/logout', headers: { cookie } });
+    assert.equal(logout.statusCode, 200);
+  } finally {
+    await cleanupSalon(slug);
+    await app.close();
+  }
+});

@@ -29,6 +29,30 @@ export async function listStaff(prisma: PrismaClient, salonId: string): Promise<
   return prisma.staffUser.findMany({ where: { salonId }, orderBy: { createdAt: 'asc' } });
 }
 
+function startOfTodayUtc(now: Date): { start: Date; end: Date } {
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  return { start, end: new Date(start.getTime() + 24 * 60 * 60 * 1000) };
+}
+
+/** How many stamps each staff member of a salon has given today (UTC calendar day) -- lets the
+ * owner spot-check who scanned how many customers at the end of the day. Keyed by staffUserId;
+ * a staff member with zero stamps today simply has no entry. */
+export async function getStaffStampCountsToday(
+  prisma: PrismaClient,
+  salonId: string,
+  now: Date = new Date(),
+): Promise<Record<string, number>> {
+  const { start, end } = startOfTodayUtc(now);
+  const grouped = await prisma.stampEvent.groupBy({
+    by: ['staffUserId'],
+    where: { createdAt: { gte: start, lt: end }, staffUser: { salonId } },
+    _count: { _all: true },
+  });
+  const counts: Record<string, number> = {};
+  for (const group of grouped) counts[group.staffUserId] = group._count._all;
+  return counts;
+}
+
 export async function addStaff(
   prisma: PrismaClient,
   input: { salonId: string; email: string; passwordHash: string; role: 'owner' | 'staff' },

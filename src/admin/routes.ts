@@ -6,6 +6,7 @@ import { getSalon, updateSalonSettings, type SalonSettingsPatch } from './salonR
 import {
   addStaff,
   EmailTakenError,
+  getStaffStampCountsToday,
   LastOwnerError,
   listStaff,
   removeStaff,
@@ -73,8 +74,15 @@ export function registerAdminRoutes(app: FastifyInstance, options: AdminRoutesOp
   );
 
   app.get('/api/staff', { preHandler: requireAuth }, async (request) => {
-    const staff = await listStaff(prisma, request.session!.salonId);
-    return staff.map((s) => ({ id: s.id, email: s.email, role: s.role, createdAt: s.createdAt }));
+    const salonId = request.session!.salonId;
+    const [staff, todayCounts] = await Promise.all([listStaff(prisma, salonId), getStaffStampCountsToday(prisma, salonId)]);
+    return staff.map((s) => ({
+      id: s.id,
+      email: s.email,
+      role: s.role,
+      createdAt: s.createdAt,
+      stampsToday: todayCounts[s.id] ?? 0,
+    }));
   });
 
   app.post<{ Body: AddStaffBody }>(

@@ -1,6 +1,6 @@
 import Fastify, { FastifyInstance } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
-import { attachSession } from './auth/tenantGuard';
+import { attachSession, blockInactiveSalon } from './auth/tenantGuard';
 import { registerAuthRoutes } from './auth/routes';
 import { registerLoyaltyRoutes } from './loyalty/routes';
 import { registerWebStaffRoutes } from './web-staff/routes';
@@ -13,6 +13,7 @@ import { registerWebLoginRoutes } from './web-login/routes';
 import { registerWebSignupRoutes } from './web-signup/routes';
 import { registerPushRoutes } from './push/routes';
 import { registerCustomerJoinRoutes } from './customer-join/routes';
+import { registerSuperadminRoutes } from './superadmin/routes';
 
 export interface BuildAppOptions {
   prisma: PrismaClient;
@@ -35,6 +36,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     : Fastify({ logger: true })) as FastifyInstance;
 
   app.addHook('preHandler', attachSession(options.sessionSecret));
+  app.addHook('preHandler', blockInactiveSalon(options.prisma));
 
   app.get('/health', async () => ({ status: 'ok' }));
 
@@ -50,6 +52,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   registerWebSignupRoutes(app);
   registerPushRoutes(app, options);
   registerCustomerJoinRoutes(app, options);
+  registerSuperadminRoutes(app, options);
 
   return app;
 }

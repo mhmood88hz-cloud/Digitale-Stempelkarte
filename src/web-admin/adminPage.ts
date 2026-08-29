@@ -50,7 +50,7 @@ export function renderAdminPage(): string {
   <table id="customers-table"><thead><tr><th>Name</th><th>Stempel</th><th>Erinnerungen</th><th></th></tr></thead><tbody></tbody></table>
 
   <h2>Personal</h2>
-  <table id="staff-table"><thead><tr><th>E-Mail</th><th>Rolle</th><th></th></tr></thead><tbody></tbody></table>
+  <table id="staff-table"><thead><tr><th>E-Mail</th><th>Rolle</th><th>Heute</th><th></th></tr></thead><tbody></tbody></table>
   <label>Neue E-Mail<input id="new-staff-email" type="email"></label>
   <label>Passwort<input id="new-staff-password" type="password"></label>
   <button id="add-staff" type="button">Personal hinzufügen</button>
@@ -147,6 +147,8 @@ export function renderAdminPage(): string {
         emailCell.textContent = member.email;
         var roleCell = document.createElement('td');
         roleCell.textContent = member.role;
+        var stampsTodayCell = document.createElement('td');
+        stampsTodayCell.textContent = member.stampsToday;
         var actionCell = document.createElement('td');
         var removeButton = document.createElement('button');
         removeButton.type = 'button';
@@ -161,6 +163,7 @@ export function renderAdminPage(): string {
         actionCell.appendChild(removeButton);
         row.appendChild(emailCell);
         row.appendChild(roleCell);
+        row.appendChild(stampsTodayCell);
         row.appendChild(actionCell);
         tbody.appendChild(row);
       });

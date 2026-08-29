@@ -21,6 +21,9 @@ model Salon {
   rewardDescription    String   @default("10 EUR Rabatt")
   trialEndsAt          DateTime
   subscriptionStatus   String   @default("trial") // "trial" | "active" | "canceled"
+  // Manual kill switch, independent of Stripe -- set by the platform owner via /superadmin.
+  // Staff/owner logins and salon-scoped API calls are blocked while false.
+  isActive             Boolean  @default(true)
   stripeCustomerId     String?  @unique
   stripeSubscriptionId String?  @unique
   // Days of inactivity (no stamp) before a customer gets a "come back" reminder push.

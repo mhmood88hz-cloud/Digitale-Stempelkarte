@@ -100,6 +100,9 @@ export function registerAuthRoutes(app: FastifyInstance, options: AuthRoutesOpti
       if (!result || !(await verifyPassword(password, result.staffUser.passwordHash))) {
         return reply.code(401).send({ error: 'invalid_credentials' });
       }
+      if (!result.salon.isActive) {
+        return reply.code(403).send({ error: 'salon_paused' });
+      }
 
       const { salon, staffUser } = result;
       const token = createSessionToken(

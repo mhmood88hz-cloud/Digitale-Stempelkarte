@@ -13,6 +13,11 @@ function uniqueSlug(): string {
 async function cleanupSalon(slug: string): Promise<void> {
   const salon = await prisma.salon.findUnique({ where: { slug } });
   if (!salon) return;
+  await prisma.stampEvent.deleteMany({ where: { loyaltyCard: { salonId: salon.id } } });
+  await prisma.redemption.deleteMany({ where: { loyaltyCard: { salonId: salon.id } } });
+  await prisma.pushSubscription.deleteMany({ where: { loyaltyCard: { salonId: salon.id } } });
+  await prisma.loyaltyCard.deleteMany({ where: { salonId: salon.id } });
+  await prisma.customer.deleteMany({ where: { salonId: salon.id } });
   await prisma.staffUser.deleteMany({ where: { salonId: salon.id } });
   await prisma.salon.delete({ where: { id: salon.id } });
 }
@@ -198,6 +203,39 @@ test('DELETE /api/staff/:id succeeds with a real browser fetch\'s headers (Conte
       payload: '{}',
     });
     assert.equal(response.statusCode, 204);
+  } finally {
+    await cleanupSalon(slug);
+    await app.close();
+  }
+});
+
+test('GET /api/staff reports how many stamps each staff member gave today', async () => {
+  const app = buildApp({ prisma, sessionSecret: 'test-secret' });
+  const slug = uniqueSlug();
+  try {
+    const cookie = await signupSalon(app, slug);
+
+    const customer = await app.inject({
+      method: 'POST',
+      url: '/api/customers',
+      headers: { cookie },
+      payload: { name: 'Stamp Test Customer' },
+    });
+    const serialNumber = customer.json().loyaltyCard.serialNumber;
+
+    const before = await app.inject({ method: 'GET', url: '/api/staff', headers: { cookie } });
+    assert.equal(before.json()[0].stampsToday, 0);
+
+    const stamp = await app.inject({
+      method: 'POST',
+      url: '/api/stamps',
+      headers: { cookie },
+      payload: { serialNumber },
+    });
+    assert.equal(stamp.statusCode, 200);
+
+    const after = await app.inject({ method: 'GET', url: '/api/staff', headers: { cookie } });
+    assert.equal(after.json()[0].stampsToday, 1);
   } finally {
     await cleanupSalon(slug);
     await app.close();

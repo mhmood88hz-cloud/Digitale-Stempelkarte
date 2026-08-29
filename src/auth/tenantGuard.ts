@@ -1,4 +1,5 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
+import type { PrismaClient } from '@prisma/client';
 import { verifySessionToken, type SessionPayload } from './session';
 
 export const SESSION_COOKIE_NAME = 'stampcard_session';
@@ -64,6 +65,29 @@ export async function requireOwner(request: FastifyRequest, reply: FastifyReply)
   if (request.session.role !== 'owner') {
     await reply.code(403).send({ error: 'forbidden' });
   }
+}
+
+/**
+ * preHandler that blocks every staff/owner request for a salon the platform owner has paused
+ * (Salon.isActive, toggled from /superadmin -- see src/superadmin). Runs on every request that
+ * has a session, right after the session is attached, so a pause takes effect on the salon's
+ * very next request instead of waiting for its 12h session to expire. `/auth/logout` is exempt
+ * so staff can still clear their own cookie once paused.
+ */
+export function blockInactiveSalon(prisma: PrismaClient) {
+  return async function blockInactiveSalonHook(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    // /superadmin* routes check their own, separate cookie (src/superadmin) and must stay
+    // reachable regardless of any salon's status -- otherwise a browser that happens to also be
+    // carrying a paused salon's staff cookie (e.g. the same device used for both) would get
+    // locked out of the very page meant to un-pause it.
+    if (!request.session || request.url === '/auth/logout' || request.url.startsWith('/superadmin') || request.url.startsWith('/api/superadmin')) {
+      return;
+    }
+    const salon = await prisma.salon.findUnique({ where: { id: request.session.salonId }, select: { isActive: true } });
+    if (salon && !salon.isActive) {
+      await reply.code(403).send({ error: 'salon_paused' });
+    }
+  };
 }
 
 /**
