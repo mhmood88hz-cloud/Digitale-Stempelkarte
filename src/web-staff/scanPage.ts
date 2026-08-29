@@ -173,7 +173,18 @@ export function renderScanPage(): string {
     navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }).then(function (stream) {
       video.style.display = 'block';
       video.srcObject = stream;
+      var stopped = false;
+      // Stop the camera the instant a code is decoded -- otherwise the next few video frames
+      // still show the same QR code and would trigger the stamp API again for each one, handing
+      // out several stamps for a single scan.
+      var stopCamera = function () {
+        stopped = true;
+        stream.getTracks().forEach(function (track) { track.stop(); });
+        video.srcObject = null;
+        video.style.display = 'none';
+      };
       var scanLoop = function () {
+        if (stopped) return;
         if (video.readyState === video.HAVE_ENOUGH_DATA && video.videoWidth > 0) {
           scanCanvas.width = video.videoWidth;
           scanCanvas.height = video.videoHeight;
@@ -181,7 +192,13 @@ export function renderScanPage(): string {
           var imageData = scanCtx.getImageData(0, 0, scanCanvas.width, scanCanvas.height);
           var code = jsQR(imageData.data, imageData.width, imageData.height);
           if (code) {
+            stopCamera();
             serialInput.value = code.data;
+            handle('/api/stamps', function (body) {
+              return 'Stempel ' + body.stampCount + ' von ' + body.stampsRequired +
+                (body.rewardReady ? ' -- Rabatt bereit!' : '.');
+            });
+            return;
           }
         }
         requestAnimationFrame(scanLoop);
