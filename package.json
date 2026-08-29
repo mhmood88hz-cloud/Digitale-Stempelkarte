@@ -10,6 +10,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsx watch src/server.ts",
+    "dev:preview": "node --env-file=.env scripts/dev-preview.js",
     "start": "node dist/server.js",
     "test": "node --env-file=.env --import tsx --test src/**/*.test.ts",
     "lint": "tsc -p tsconfig.json --noEmit",
